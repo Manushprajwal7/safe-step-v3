@@ -1,5 +1,8 @@
-import { createClient } from "@/lib/supabase/server"
+import { createRouteHandlerClient } from "@supabase/auth-helpers-nextjs"
 import { type NextRequest, NextResponse } from "next/server"
+import { cookies } from "next/headers"
+
+export const dynamic = 'force-dynamic'
 
 export async function GET(request: NextRequest) {
   console.log('Starting OAuth callback');
@@ -29,7 +32,8 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const supabase = createClient();
+  const cookieStore = cookies()
+  const supabase = createRouteHandlerClient({ cookies: () => cookieStore });
   
   try {
     console.log('Exchanging code for session');

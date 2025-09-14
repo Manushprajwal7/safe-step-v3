@@ -1,0 +1,167 @@
+"use client"
+
+import { useEffect, useState } from "react"
+import { useRouter } from "next/navigation"
+import { Button } from "@/components/ui/button"
+import { Heart, Loader2, Activity, Shield, Users } from "lucide-react"
+import Link from "next/link"
+import { supabase } from "@/lib/supabase/client"
+
+export default function LandingPage() {
+  const router = useRouter()
+  const [isLoading, setIsLoading] = useState(true)
+
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession()
+        
+        if (session?.user) {
+          const { data: profile } = await supabase
+            .from("profiles")
+            .select("onboarding_completed, role")
+            .eq("id", session.user.id)
+            .single()
+
+          if (profile) {
+            if (!profile.onboarding_completed) {
+              router.push('/onboard')
+            } else if (profile.role === 'admin') {
+              router.push('/admin/dashboard')
+            } else {
+              router.push('/home')
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Auth check error:', error)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    checkAuth()
+  }, [router])
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    )
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-green-50 to-teal-50">
+      {/* Header */}
+      <header className="border-b bg-white/80 backdrop-blur-sm">
+        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
+              <Heart className="w-5 h-5 text-primary-foreground" />
+            </div>
+            <span className="text-xl font-serif font-semibold text-foreground">Safe Step</span>
+          </div>
+          <div className="flex items-center gap-4">
+            <Link href="/auth/login">
+              <Button variant="ghost">Sign In</Button>
+            </Link>
+            <Link href="/auth/register">
+              <Button>Get Started</Button>
+            </Link>
+          </div>
+        </div>
+      </header>
+
+      {/* Hero Section */}
+      <section className="py-20 px-4">
+        <div className="container mx-auto max-w-4xl text-center">
+          <h1 className="text-4xl md:text-5xl font-bold font-serif text-foreground mb-6">
+            Advanced Diabetic Foot Care Monitoring
+          </h1>
+          <p className="text-lg text-muted-foreground mb-8">
+            Track, analyze, and prevent foot complications with our AI-powered monitoring system.
+          </p>
+          <div className="flex flex-col sm:flex-row justify-center gap-4">
+            <Link href="/auth/register" className="w-full sm:w-auto">
+              <Button size="lg" className="w-full">Get Started Free</Button>
+            </Link>
+            <Link href="#features" className="w-full sm:w-auto">
+              <Button variant="outline" size="lg" className="w-full">
+                Learn More
+              </Button>
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* Features Section */}
+      <section id="features" className="py-20 bg-white">
+        <div className="container mx-auto px-4">
+          <h2 className="text-3xl font-bold text-center mb-12">Key Features</h2>
+          <div className="grid md:grid-cols-3 gap-8">
+            <div className="bg-white rounded-lg border shadow-sm p-6 text-center">
+              <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mx-auto mb-4">
+                <Activity className="w-6 h-6 text-primary" />
+              </div>
+              <h3 className="text-xl font-semibold mb-2">Real-time Monitoring</h3>
+              <p className="text-muted-foreground">
+                Continuous tracking of foot health metrics with instant alerts for any concerns.
+              </p>
+            </div>
+
+            <div className="bg-white rounded-lg border shadow-sm p-6 text-center">
+              <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mx-auto mb-4">
+                <Shield className="w-6 h-6 text-primary" />
+              </div>
+              <h3 className="text-xl font-semibold mb-2">Risk Assessment</h3>
+              <p className="text-muted-foreground">
+                AI-powered analysis to predict and prevent potential complications.
+              </p>
+            </div>
+
+            <div className="bg-white rounded-lg border shadow-sm p-6 text-center">
+              <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mx-auto mb-4">
+                <Users className="w-6 h-6 text-primary" />
+              </div>
+              <h3 className="text-xl font-semibold mb-2">Care Team Access</h3>
+              <p className="text-muted-foreground">
+                Share your progress with healthcare providers for better care coordination.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* CTA Section */}
+      <section className="py-20 px-4 bg-primary text-primary-foreground">
+        <div className="container mx-auto max-w-3xl text-center">
+          <h2 className="text-3xl font-bold mb-6">Take Control of Your Foot Health Today</h2>
+          <p className="text-lg mb-8 opacity-90">
+            Join thousands of patients who trust Safe Step for comprehensive diabetic foot care monitoring.
+          </p>
+          <Link href="/auth/register">
+            <Button size="lg" variant="secondary" className="text-lg px-8">
+              Get Started Free
+            </Button>
+          </Link>
+        </div>
+      </section>
+
+      {/* Footer */}
+      <footer className="py-12 px-4 bg-muted">
+        <div className="container mx-auto text-center">
+          <div className="flex items-center justify-center gap-2 mb-4">
+            <div className="w-6 h-6 bg-primary rounded-md flex items-center justify-center">
+              <Heart className="w-4 h-4 text-primary-foreground" />
+            </div>
+            <span className="font-serif font-semibold">Safe Step</span>
+          </div>
+          <p className="text-sm text-muted-foreground">
+            © {new Date().getFullYear()} Safe Step Health. All rights reserved.
+          </p>
+        </div>
+      </footer>
+    </div>
+  )
+}

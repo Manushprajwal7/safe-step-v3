@@ -1,22 +1,64 @@
-import { createClient } from "@/lib/supabase/server"
-import { redirect } from "next/navigation"
-import RegisterForm from "@/components/auth/register-form"
+"use client"
+
+import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
 import { Heart } from "lucide-react"
 import Link from "next/link"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { toast } from "sonner"
+import { supabase } from "@/lib/supabase/client"
 
-export default async function RegisterPage() {
-  try {
-    const supabase = await createClient()
-    const {
-      data: { session },
-    } = await supabase.auth.getSession()
+export default function RegisterPage() {
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [fullName, setFullName] = useState('')
+  const [isLoading, setIsLoading] = useState(false)
+  const router = useRouter()
 
-    if (session) {
-      redirect("/onboard")
+  // Check if user is already logged in
+  useEffect(() => {
+    const checkSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (session) {
+        router.push('/onboard')
+      }
     }
-  } catch (error) {
-    console.error("Auth check failed:", error)
-    // Continue to show register form even if auth check fails
+    checkSession()
+  }, [router])
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setIsLoading(true)
+
+    try {
+      const response = await fetch('/auth/register', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: new URLSearchParams({
+          email,
+          password,
+          fullName,
+        }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Registration failed')
+      }
+
+      // Redirect to onboarding or show success message
+      toast.success('Registration successful! Please check your email to confirm your account.')
+      router.push('/login')
+    } catch (error: any) {
+      toast.error(error.message || 'An error occurred during registration')
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   return (
@@ -32,7 +74,51 @@ export default async function RegisterPage() {
           <h1 className="text-3xl font-serif font-bold text-foreground mb-2">Create Account</h1>
           <p className="text-muted-foreground">Start your journey to better foot health</p>
         </div>
-        <RegisterForm />
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="fullName">Full Name</Label>
+            <Input
+              id="fullName"
+              type="text"
+              placeholder="John Doe"
+              value={fullName}
+              onChange={(e) => setFullName(e.target.value)}
+              required
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="email">Email</Label>
+            <Input
+              id="email"
+              type="email"
+              placeholder="name@example.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="password">Password</Label>
+            <Input
+              id="password"
+              type="password"
+              placeholder="••••••••"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              minLength={6}
+            />
+          </div>
+          <Button type="submit" className="w-full" disabled={isLoading}>
+            {isLoading ? 'Creating account...' : 'Create Account'}
+          </Button>
+          <p className="text-center text-sm text-muted-foreground">
+            Already have an account?{' '}
+            <Link href="/auth/login" className="text-primary hover:underline">
+              Sign in
+            </Link>
+          </p>
+        </form>
       </div>
     </div>
   )
