@@ -1,24 +1,33 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { Button } from "@/components/ui/button"
-import { Heart, Menu, Bell, LogOut } from "lucide-react"
-import { signOut } from "@/lib/actions"
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import {
+  Heart,
+  Menu,
+  Bell,
+  LogOut,
+  Settings,
+  User,
+  HelpCircle,
+} from "lucide-react";
+import { signOut } from "@/lib/actions";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { motion, AnimatePresence } from "framer-motion"
+} from "@/components/ui/dropdown-menu";
+import { motion, AnimatePresence } from "framer-motion";
+import Link from "next/link";
 
 export default function PatientHeader() {
-  const [notificationCount] = useState(3)
+  const [notificationCount] = useState(3);
 
   return (
     <motion.header
-      className="bg-white/80 backdrop-blur-md border-b border-border sticky top-0 z-40"
+      className="bg-white/90 backdrop-blur-md border-b border-gray-200 sticky top-0 z-40 shadow-sm"
       initial={{ y: -100 }}
       animate={{ y: 0 }}
       transition={{ type: "spring", stiffness: 300, damping: 30 }}
@@ -26,7 +35,7 @@ export default function PatientHeader() {
       <div className="container mx-auto px-4 py-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <motion.div
-            className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center"
+            className="w-10 h-10 bg-green-600 rounded-xl flex items-center justify-center"
             whileHover={{
               scale: 1.05,
               rotate: [0, -5, 5, 0],
@@ -34,11 +43,11 @@ export default function PatientHeader() {
             whileTap={{ scale: 0.95 }}
             transition={{ duration: 0.3 }}
           >
-            <Heart className="w-5 h-5 text-primary-foreground" />
+            <Heart className="w-6 h-6 text-white" />
           </motion.div>
           <div>
             <motion.h1
-              className="text-lg font-serif font-semibold text-foreground"
+              className="text-xl font-serif font-bold text-gray-800"
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.2, duration: 0.5 }}
@@ -46,7 +55,7 @@ export default function PatientHeader() {
               Safe Step
             </motion.h1>
             <motion.p
-              className="text-xs text-muted-foreground hidden sm:block"
+              className="text-sm text-gray-600 hidden sm:block"
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.3, duration: 0.5 }}
@@ -66,17 +75,21 @@ export default function PatientHeader() {
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: 0.4, duration: 0.3 }}
           >
-            <Button variant="ghost" size="sm" className="relative">
+            <Button
+              variant="outline"
+              size="icon"
+              className="relative rounded-full border-gray-300"
+            >
               <motion.div
                 animate={{ rotate: [0, -10, 10, 0] }}
-                transition={{ duration: 2, repeat: Number.POSITIVE_INFINITY, repeatDelay: 3 }}
+                transition={{ duration: 2, repeat: Infinity, repeatDelay: 3 }}
               >
-                <Bell className="h-4 w-4" />
+                <Bell className="h-5 w-5 text-gray-600" />
               </motion.div>
               <AnimatePresence>
                 {notificationCount > 0 && (
                   <motion.span
-                    className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground text-xs rounded-full h-5 w-5 flex items-center justify-center"
+                    className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center"
                     initial={{ scale: 0, opacity: 0 }}
                     animate={{ scale: 1, opacity: 1 }}
                     exit={{ scale: 0, opacity: 0 }}
@@ -97,20 +110,45 @@ export default function PatientHeader() {
           >
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                  <Button variant="ghost" size="sm">
-                    <Menu className="h-4 w-4" />
+                <motion.div
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="rounded-full border-gray-300"
+                  >
+                    <Menu className="h-5 w-5 text-gray-600" />
                   </Button>
                 </motion.div>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48">
-                <DropdownMenuItem>Profile Settings</DropdownMenuItem>
-                <DropdownMenuItem>Preferences</DropdownMenuItem>
-                <DropdownMenuItem>Help & Support</DropdownMenuItem>
+              <DropdownMenuContent align="end" className="w-64">
+                <Link href="/settings/profile">
+                  <DropdownMenuItem>
+                    <User className="h-4 w-4 mr-2" />
+                    <span>Profile Settings</span>
+                  </DropdownMenuItem>
+                </Link>
+                <Link href="/settings/preferences">
+                  <DropdownMenuItem>
+                    <Settings className="h-4 w-4 mr-2" />
+                    <span>Preferences</span>
+                  </DropdownMenuItem>
+                </Link>
+                <Link href="/support">
+                  <DropdownMenuItem>
+                    <HelpCircle className="h-4 w-4 mr-2" />
+                    <span>Help & Support</span>
+                  </DropdownMenuItem>
+                </Link>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => signOut()} className="text-destructive focus:text-destructive">
+                <DropdownMenuItem
+                  onClick={() => signOut()}
+                  className="text-red-600 focus:text-red-600"
+                >
                   <LogOut className="h-4 w-4 mr-2" />
-                  Sign Out
+                  <span>Sign Out</span>
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -118,5 +156,5 @@ export default function PatientHeader() {
         </div>
       </div>
     </motion.header>
-  )
+  );
 }

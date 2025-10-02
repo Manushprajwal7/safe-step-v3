@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Heart, Loader2, Activity, Shield, Users } from "lucide-react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase/client";
+import Image from "next/image";
 
 // Simple card component since we're not importing from UI components
 const Card = ({
@@ -15,7 +16,9 @@ const Card = ({
   children: React.ReactNode;
   className?: string;
 }) => (
-  <div className={`bg-white rounded-lg border shadow-sm p-6 ${className}`}>
+  <div
+    className={`bg-white rounded-xl border border-gray-200 shadow-sm p-6 ${className}`}
+  >
     {children}
   </div>
 );
@@ -37,7 +40,7 @@ const CardContent = ({ children }: { children: React.ReactNode }) => (
 );
 
 const CardDescription = ({ children }: { children: React.ReactNode }) => (
-  <p className="text-muted-foreground">{children}</p>
+  <p className="text-gray-600">{children}</p>
 );
 
 export default function LandingPage() {
@@ -96,10 +99,10 @@ export default function LandingPage() {
       <header className="border-b bg-white/80 backdrop-blur-sm">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-              <Heart className="w-5 h-5 text-primary-foreground" />
+            <div className="w-10 h-10 bg-green-600 rounded-lg flex items-center justify-center">
+              <Heart className="w-6 h-6 text-white" />
             </div>
-            <span className="text-xl font-serif font-semibold text-foreground">
+            <span className="text-2xl font-serif font-bold text-gray-800">
               Safe Step
             </span>
           </div>
@@ -107,29 +110,58 @@ export default function LandingPage() {
       </header>
 
       {/* Hero Section */}
-      <section className="py-20 px-4">
-        <div className="container mx-auto text-center max-w-4xl">
-          <h1 className="text-5xl md:text-6xl font-serif font-bold text-foreground mb-6">
-            Advanced Foot Health
-            <span className="text-primary block">Monitoring</span>
-          </h1>
-          <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto leading-relaxed">
-            Comprehensive diabetic foot care with real-time pressure monitoring,
-            AI-powered analysis, and personalized health insights.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link href="/auth/register">
-              <Button size="lg" className="text-lg px-8 py-6">
-                Start Monitoring
-              </Button>
-            </Link>
-            <Button
-              size="lg"
-              variant="outline"
-              className="text-lg px-8 py-6 bg-transparent"
-            >
-              Learn More
-            </Button>
+      <section className="py-16 px-4">
+        <div className="container mx-auto max-w-6xl">
+          <div className="grid md:grid-cols-2 gap-12 items-center">
+            <div className="space-y-6">
+              <h1 className="text-4xl md:text-5xl font-serif font-bold text-gray-800 leading-tight">
+                Advanced Foot Health
+                <span className="text-green-600 block">Monitoring</span>
+              </h1>
+              <p className="text-xl text-gray-600 leading-relaxed">
+                Comprehensive diabetic foot care with real-time pressure
+                monitoring, AI-powered analysis, and personalized health
+                insights.
+              </p>
+              <div className="flex flex-col sm:flex-row gap-4">
+                <Link href="/auth/register">
+                  <Button
+                    size="lg"
+                    className="text-base px-8 py-6 bg-green-600 hover:bg-green-700"
+                  >
+                    Start Monitoring
+                  </Button>
+                </Link>
+                <Button
+                  size="lg"
+                  variant="outline"
+                  className="text-base px-8 py-6 bg-white border-green-600 text-green-600 hover:bg-green-50"
+                >
+                  Learn More
+                </Button>
+              </div>
+            </div>
+
+            {/* Device Image */}
+            <div className="flex justify-center">
+              <div className="relative">
+                <Image
+                  src="/device-image.jpg"
+                  alt="Safe Step Prototype Device"
+                  width={400}
+                  height={400}
+                  className="rounded-2xl shadow-xl"
+                />
+                <div className="mt-6 text-center">
+                  <p className="text-2xl font-serif font-semibold text-gray-800">
+                    Our Prototype Device
+                  </p>
+                  <p className="text-gray-600 mt-2">
+                    Advanced technology for precise foot health monitoring
+                  </p>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </section>
@@ -137,16 +169,16 @@ export default function LandingPage() {
       {/* Features Section */}
       <section className="py-16 px-4 bg-white">
         <div className="container mx-auto max-w-6xl">
-          <h2 className="text-3xl font-serif font-bold text-center mb-12">
+          <h2 className="text-3xl font-serif font-bold text-center mb-12 text-gray-800">
             Comprehensive Health Monitoring
           </h2>
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <Card className="text-center">
+            <Card className="text-center hover:shadow-md transition-shadow">
               <CardHeader>
-                <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mx-auto mb-4">
-                  <Activity className="w-6 h-6 text-primary" />
+                <div className="w-16 h-16 bg-green-100 rounded-xl flex items-center justify-center mx-auto mb-4">
+                  <Activity className="w-8 h-8 text-green-600" />
                 </div>
-                <CardTitle className="text-lg">Real-time Monitoring</CardTitle>
+                <CardTitle className="text-xl">Real-time Monitoring</CardTitle>
               </CardHeader>
               <CardContent>
                 <CardDescription>
@@ -155,12 +187,12 @@ export default function LandingPage() {
               </CardContent>
             </Card>
 
-            <Card className="text-center">
+            <Card className="text-center hover:shadow-md transition-shadow">
               <CardHeader>
-                <div className="w-12 h-12 bg-accent/10 rounded-lg flex items-center justify-center mx-auto mb-4">
-                  <Shield className="w-6 h-6 text-accent" />
+                <div className="w-16 h-16 bg-teal-100 rounded-xl flex items-center justify-center mx-auto mb-4">
+                  <Shield className="w-8 h-8 text-teal-600" />
                 </div>
-                <CardTitle className="text-lg">AI Analysis</CardTitle>
+                <CardTitle className="text-xl">AI Analysis</CardTitle>
               </CardHeader>
               <CardContent>
                 <CardDescription>
@@ -169,12 +201,12 @@ export default function LandingPage() {
               </CardContent>
             </Card>
 
-            <Card className="text-center">
+            <Card className="text-center hover:shadow-md transition-shadow">
               <CardHeader>
-                <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mx-auto mb-4">
-                  <Heart className="w-6 h-6 text-primary" />
+                <div className="w-16 h-16 bg-green-100 rounded-xl flex items-center justify-center mx-auto mb-4">
+                  <Heart className="w-8 h-8 text-green-600" />
                 </div>
-                <CardTitle className="text-lg">Personalized Care</CardTitle>
+                <CardTitle className="text-xl">Personalized Care</CardTitle>
               </CardHeader>
               <CardContent>
                 <CardDescription>
@@ -183,12 +215,12 @@ export default function LandingPage() {
               </CardContent>
             </Card>
 
-            <Card className="text-center">
+            <Card className="text-center hover:shadow-md transition-shadow">
               <CardHeader>
-                <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mx-auto mb-4">
-                  <Users className="w-6 h-6 text-primary" />
+                <div className="w-16 h-16 bg-green-100 rounded-xl flex items-center justify-center mx-auto mb-4">
+                  <Users className="w-8 h-8 text-green-600" />
                 </div>
-                <CardTitle className="text-lg">
+                <CardTitle className="text-xl">
                   Healthcare Integration
                 </CardTitle>
               </CardHeader>
@@ -203,17 +235,21 @@ export default function LandingPage() {
       </section>
 
       {/* CTA Section */}
-      <section className="py-20 px-4 bg-primary text-primary-foreground">
+      <section className="py-20 px-4 bg-gradient-to-r from-green-600 to-teal-600 text-white">
         <div className="container mx-auto text-center max-w-3xl">
           <h2 className="text-3xl font-serif font-bold mb-6">
             Take Control of Your Foot Health Today
           </h2>
-          <p className="text-lg mb-8 opacity-90">
+          <p className="text-xl mb-8 opacity-90">
             Join thousands of patients who trust Safe Step for comprehensive
             diabetic foot care monitoring.
           </p>
           <Link href="/auth/register">
-            <Button size="lg" variant="secondary" className="text-lg px-8 py-6">
+            <Button
+              size="lg"
+              variant="secondary"
+              className="text-lg px-8 py-6 bg-white text-green-600 hover:bg-gray-100"
+            >
               Get Started Free
             </Button>
           </Link>
@@ -221,17 +257,21 @@ export default function LandingPage() {
       </section>
 
       {/* Footer */}
-      <footer className="py-8 px-4 bg-muted">
-        <div className="container mx-auto text-center">
-          <div className="flex items-center justify-center gap-2 mb-4">
-            <div className="w-6 h-6 bg-primary rounded-md flex items-center justify-center">
-              <Heart className="w-4 h-4 text-primary-foreground" />
+      <footer className="py-12 px-4 bg-gray-50">
+        <div className="container mx-auto">
+          <div className="flex flex-col md:flex-row items-center justify-between">
+            <div className="flex items-center gap-2 mb-6 md:mb-0">
+              <div className="w-10 h-10 bg-green-600 rounded-lg flex items-center justify-center">
+                <Heart className="w-6 h-6 text-white" />
+              </div>
+              <span className="text-2xl font-serif font-bold text-gray-800">
+                Safe Step
+              </span>
             </div>
-            <span className="font-serif font-semibold">Safe Step</span>
+            <p className="text-gray-600 text-center md:text-right">
+              © 2024 Safe Step Health. Advanced diabetic foot care monitoring.
+            </p>
           </div>
-          <p className="text-sm text-muted-foreground">
-            © 2024 Safe Step Health. Advanced diabetic foot care monitoring.
-          </p>
         </div>
       </footer>
     </div>
