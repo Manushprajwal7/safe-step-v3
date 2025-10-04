@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
+import { signUp } from "@/lib/actions";
 import { supabase } from "@/lib/supabase/client";
 
 export default function RegisterPage() {
@@ -35,68 +36,40 @@ export default function RegisterPage() {
     e.preventDefault();
     setIsLoading(true);
 
+    // Create FormData object
+    const formData = new FormData();
+    formData.append("full_name", fullName);
+    formData.append("email", email);
+    formData.append("password", password);
+
     try {
-      // Sign up the user
-      const { data: signUpData, error: signUpError } =
-        await supabase.auth.signUp({
-          email,
-          password,
-          options: {
-            data: {
-              full_name: fullName,
-            },
-            emailRedirectTo: `${window.location.origin}/auth/callback`,
-          },
-        });
+      const result = await signUp(null, formData);
 
-      if (signUpError) {
-        throw new Error(signUpError.message || "Registration failed");
+      if (result?.error) {
+        toast.error(result.error);
+      } else if (result?.success) {
+        // Redirect to login page with success message
+        router.push("/auth/login?registered=true");
       }
-
-      // Immediately sign in the user regardless of email confirmation status
-      const { data: signInData, error: signInError } =
-        await supabase.auth.signInWithPassword({
-          email,
-          password,
-        });
-
-      if (signInError) {
-        // If it's an email confirmation error, try to bypass it
-        if (signInError.message.includes("Email not confirmed")) {
-          // Use our server action to handle the bypass
-          const response = await fetch("/api/auth/bypass-confirm", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({ email, password }),
-          });
-
-          const result = await response.json();
-
-          if (!response.ok || result.error) {
-            // Even if there's a sign-in error, redirect to login with success message
-            // since the account was created successfully
-            toast.success("Account created successfully! Please sign in.");
-            router.push("/auth/login");
-            return;
-          }
-        } else {
-          // Even if there's a sign-in error, redirect to login with success message
-          // since the account was created successfully
-          toast.success("Account created successfully! Please sign in.");
-          router.push("/auth/login");
-          return;
-        }
-      }
-
-      // If sign in is successful, redirect to onboarding
-      toast.success("Registration successful!");
-      router.push("/onboard");
     } catch (error: any) {
       toast.error(error.message || "An error occurred during registration");
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleGoogleSignUp = async () => {
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback`,
+        },
+      });
+
+      if (error) throw error;
+    } catch (error: any) {
+      toast.error(error.message || "Failed to sign up with Google");
     }
   };
 
@@ -221,20 +194,7 @@ export default function RegisterPage() {
               type="button"
               variant="outline"
               className="w-full h-12 border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50"
-              onClick={async () => {
-                try {
-                  const { error } = await supabase.auth.signInWithOAuth({
-                    provider: "google",
-                    options: {
-                      redirectTo: `${window.location.origin}/auth/callback`,
-                    },
-                  });
-
-                  if (error) throw error;
-                } catch (error: any) {
-                  toast.error(error.message || "Failed to sign up with Google");
-                }
-              }}
+              onClick={handleGoogleSignUp}
             >
               <svg className="mr-2 h-5 w-5" viewBox="0 0 24 24">
                 <path

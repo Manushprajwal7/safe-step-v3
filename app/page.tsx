@@ -59,7 +59,7 @@ export default function LandingPage() {
           const { data: profile } = await supabase
             .from("profiles")
             .select("onboarding_completed, role")
-            .eq("id", session.user.id)
+            .eq("user_id", session.user.id)
             .single();
 
           if (profile) {

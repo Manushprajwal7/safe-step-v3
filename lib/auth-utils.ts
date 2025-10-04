@@ -1,42 +1,74 @@
-import { supabase } from './supabase/client';
+import { createAdminClient } from "@/lib/supabase/server";
 
-export interface AuthResponse {
-  error: Error | null;
-  success: boolean;
+/**
+ * Automatically confirms a user's email address
+ * This bypasses the need for email confirmation
+ *
+ * @param userId - The ID of the user to confirm
+ * @returns Promise<boolean> - Whether the confirmation was successful
+ */
+export async function confirmUserEmail(userId: string): Promise<boolean> {
+  try {
+    const adminClient = createAdminClient();
+
+    const { error } = await adminClient.auth.admin.updateUserById(userId, {
+      email_confirm: true,
+    });
+
+    if (error) {
+      console.error("Error confirming user:", error);
+      return false;
+    }
+
+    return true;
+  } catch (error) {
+    console.error("Unexpected error confirming user:", error);
+    return false;
+  }
 }
 
-export const signInWithGoogle = async (): Promise<AuthResponse> => {
+/**
+ * Checks if a user is confirmed and confirms them if they're not
+ *
+ * @param userId - The ID of the user to check and potentially confirm
+ * @returns Promise<boolean> - Whether the user is confirmed (either already was or now is)
+ */
+export async function ensureUserIsConfirmed(userId: string): Promise<boolean> {
   try {
-    if (typeof window === 'undefined') {
-      throw new Error('This function must be called from the client side');
+    const adminClient = createAdminClient();
+
+    // Get the user to check their confirmation status
+    const {
+      data: { user },
+      error: getUserError,
+    } = await adminClient.auth.admin.getUserById(userId);
+
+    if (getUserError || !user) {
+      console.error("Error getting user:", getUserError);
+      return false;
     }
 
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
-        queryParams: {
-          access_type: 'offline',
-          prompt: 'consent',
-        },
-        scopes: 'email profile',
-      },
-    });
-    
-    if (error) {
-      console.error('Error signing in with Google:', error);
-      return { 
-        error: new Error(error.message || 'Failed to sign in with Google'), 
-        success: false 
-      };
+    // If user is already confirmed, return true
+    if (user.email_confirmed_at) {
+      return true;
     }
-    
-    return { error: null, success: true };
+
+    // If not confirmed, confirm them now
+    const { error: updateError } = await adminClient.auth.admin.updateUserById(
+      userId,
+      {
+        email_confirm: true,
+      }
+    );
+
+    if (updateError) {
+      console.error("Error confirming user:", updateError);
+      return false;
+    }
+
+    return true;
   } catch (error) {
-    console.error('Unexpected error during Google sign in:', error);
-    return { 
-      error: error instanceof Error ? error : new Error('An unexpected error occurred'), 
-      success: false 
-    };
+    console.error("Unexpected error in ensureUserIsConfirmed:", error);
+    return false;
   }
-};
+}

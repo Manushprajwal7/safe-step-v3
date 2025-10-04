@@ -2,6 +2,7 @@ import { createRouteHandlerClient } from "@supabase/auth-helpers-nextjs";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/server";
+import { ensureUserIsConfirmed } from "@/lib/auth-utils";
 
 export async function POST(request: Request) {
   try {
@@ -21,7 +22,7 @@ export async function POST(request: Request) {
     // Use admin client to bypass email confirmation
     const adminClient = createAdminClient();
 
-    // Get the user directly
+    // Get the user directly by listing users and filtering by email
     const {
       data: { users },
       error: listUsersError,
@@ -45,19 +46,12 @@ export async function POST(request: Request) {
       );
     }
 
-    // Since we can't directly create sessions, we'll mark the user as confirmed
-    // and then try to sign in again
-    const { error: updateError } = await adminClient.auth.admin.updateUserById(
-      user.id,
-      {
-        email_confirm: true,
-      }
-    );
+    // Ensure the user is confirmed
+    const isConfirmed = await ensureUserIsConfirmed(user.id);
 
-    if (updateError) {
-      console.error("Update user error:", updateError);
+    if (!isConfirmed) {
       return NextResponse.json(
-        { error: "Authentication failed." },
+        { error: "Failed to confirm user account." },
         { status: 401 }
       );
     }
@@ -83,7 +77,11 @@ export async function POST(request: Request) {
       );
     }
 
-    return NextResponse.json({ user: data.user });
+    // Return success with session data
+    return NextResponse.json({
+      user: data.user,
+      session: data.session,
+    });
   } catch (error: any) {
     console.error("Unexpected error in bypass-confirm route:", error);
     return NextResponse.json(

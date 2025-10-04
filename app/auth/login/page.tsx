@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Heart, Mail, Lock, Eye, EyeOff, Loader2 } from "lucide-react";
 import Link from "next/link";
@@ -9,13 +9,16 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase/client";
+import { Suspense } from "react";
 
-export default function LoginPage() {
+function LoginContent() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [registrationSuccess, setRegistrationSuccess] = useState(false);
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   // Check if user is already logged in
   useEffect(() => {
@@ -25,15 +28,45 @@ export default function LoginPage() {
           data: { session },
         } = await supabase.auth.getSession();
         if (session) {
-          const response = await fetch("/api/auth/me");
-          if (response.ok) {
-            const { role, onboarding_completed } = await response.json();
-            if (!onboarding_completed) {
-              router.push("/onboard");
-            } else if (role === "admin") {
-              router.push("/admin/dashboard");
+          const {
+            data: { user },
+          } = await supabase.auth.getUser();
+          if (user) {
+            // Get user profile to determine role
+            const { data: profile, error: profileError } = await supabase
+              .from("profiles")
+              .select("role, onboarding_completed")
+              .eq("user_id", user.id)
+              .single();
+
+            if (!profileError && profile) {
+              if (!profile.onboarding_completed) {
+                router.push("/onboard");
+              } else if (profile.role === "admin") {
+                router.push("/admin/dashboard");
+              } else {
+                router.push("/home");
+              }
+            } else if (profileError && profileError.code === "PGRST116") {
+              // No profile found, create one
+              const { error: createProfileError } = await supabase
+                .from("profiles")
+                .insert([
+                  {
+                    user_id: user.id,
+                    role: "patient",
+                    onboarding_completed: false,
+                  },
+                ]);
+
+              if (!createProfileError) {
+                router.push("/onboard");
+              } else {
+                router.push("/onboard");
+              }
             } else {
-              router.push("/home");
+              // Default redirect if profile not found
+              router.push("/onboard");
             }
           }
         }
@@ -43,6 +76,13 @@ export default function LoginPage() {
     }
     checkSession();
   }, [router]);
+
+  // Check for registration success message
+  useEffect(() => {
+    if (searchParams.get("registered") === "true") {
+      setRegistrationSuccess(true);
+    }
+  }, [searchParams]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -55,7 +95,7 @@ export default function LoginPage() {
       });
 
       if (error) {
-        // Handle different types of errors gracefully
+        // Handle email not confirmed error by bypassing confirmation
         if (error.message.includes("Email not confirmed")) {
           // Use our server action to handle the bypass
           const response = await fetch("/api/auth/bypass-confirm", {
@@ -69,60 +109,119 @@ export default function LoginPage() {
           const result = await response.json();
 
           if (!response.ok || result.error) {
-            // Check if it's because the user doesn't exist
-            if (
-              result.error &&
-              result.error.includes("Invalid email or password")
-            ) {
-              throw new Error(
-                "No account found with this email. Please sign up first."
-              );
-            }
             throw new Error(result.error || "Login failed");
           }
 
           // If successful, redirect based on user role
-          const roleResponse = await fetch("/api/auth/me");
-          if (roleResponse.ok) {
-            const { role, onboarding_completed } = await roleResponse.json();
-            if (!onboarding_completed) {
-              router.push("/onboard");
-              return;
-            } else if (role === "admin") {
-              router.push("/admin/dashboard");
-              return;
+          const {
+            data: { user },
+          } = await supabase.auth.getUser();
+          if (user) {
+            // Get user profile to determine where to redirect
+            const { data: profile, error: profileError } = await supabase
+              .from("profiles")
+              .select("role, onboarding_completed")
+              .eq("user_id", user.id)
+              .single();
+
+            if (!profileError && profile) {
+              if (!profile.onboarding_completed) {
+                router.push("/onboard");
+              } else if (profile.role === "admin") {
+                router.push("/admin/dashboard");
+              } else {
+                router.push("/home");
+              }
+            } else if (profileError && profileError.code === "PGRST116") {
+              // No profile found, create one
+              const { error: createProfileError } = await supabase
+                .from("profiles")
+                .insert([
+                  {
+                    user_id: user.id,
+                    role: "patient",
+                    onboarding_completed: false,
+                  },
+                ]);
+
+              if (!createProfileError) {
+                router.push("/onboard");
+              } else {
+                router.push("/onboard");
+              }
             } else {
-              router.push("/home");
-              return;
+              // Default redirect if profile not found
+              router.push("/onboard");
             }
           }
-        } else if (error.message.includes("Invalid login credentials")) {
-          // More specific error message for non-existent users
-          throw new Error(
-            "No account found with this email. Please sign up first."
-          );
-        } else {
-          // For other errors
-          throw new Error(error.message || "Login failed");
+          return;
         }
+
+        throw new Error(error.message);
       }
 
       // If we get here, authentication was successful
-      // Redirect based on user role
-      const roleResponse = await fetch("/api/auth/me");
-      const { role, onboarding_completed } = await roleResponse.json();
+      // Get user profile to determine where to redirect
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (user) {
+        // Get user profile to determine where to redirect
+        const { data: profile, error: profileError } = await supabase
+          .from("profiles")
+          .select("role, onboarding_completed")
+          .eq("user_id", user.id)
+          .single();
 
-      if (!onboarding_completed) {
-        router.push("/onboard");
-      } else if (role === "admin") {
-        router.push("/admin/dashboard");
-      } else {
-        router.push("/home");
+        if (!profileError && profile) {
+          if (!profile.onboarding_completed) {
+            router.push("/onboard");
+          } else if (profile.role === "admin") {
+            router.push("/admin/dashboard");
+          } else {
+            router.push("/home");
+          }
+        } else if (profileError && profileError.code === "PGRST116") {
+          // No profile found, create one
+          const { error: createProfileError } = await supabase
+            .from("profiles")
+            .insert([
+              {
+                user_id: user.id,
+                role: "patient",
+                onboarding_completed: false,
+              },
+            ]);
+
+          if (!createProfileError) {
+            router.push("/onboard");
+          } else {
+            router.push("/onboard");
+          }
+        } else {
+          // Default redirect if profile not found
+          router.push("/onboard");
+        }
       }
     } catch (error: any) {
       toast.error(error.message || "An error occurred during login");
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleGoogleSignIn = async () => {
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback`,
+        },
+      });
+
+      if (error) throw error;
+    } catch (error: any) {
+      toast.error(error.message || "Failed to sign in with Google");
     }
   };
 
@@ -147,6 +246,15 @@ export default function LoginPage() {
         </div>
 
         <div className="bg-white rounded-2xl shadow-xl p-8 border border-gray-100">
+          {registrationSuccess && (
+            <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg">
+              <p className="text-green-800 text-center">
+                Your account has been created successfully! Please login to
+                proceed.
+              </p>
+            </div>
+          )}
+
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-2">
               <Label htmlFor="email" className="text-gray-700 font-medium">
@@ -233,20 +341,7 @@ export default function LoginPage() {
               type="button"
               variant="outline"
               className="w-full h-12 border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50"
-              onClick={async () => {
-                try {
-                  const { error } = await supabase.auth.signInWithOAuth({
-                    provider: "google",
-                    options: {
-                      redirectTo: `${window.location.origin}/auth/callback`,
-                    },
-                  });
-
-                  if (error) throw error;
-                } catch (error: any) {
-                  toast.error(error.message || "Failed to sign in with Google");
-                }
-              }}
+              onClick={handleGoogleSignIn}
             >
               <svg className="mr-2 h-5 w-5" viewBox="0 0 24 24">
                 <path
@@ -282,5 +377,13 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <LoginContent />
+    </Suspense>
   );
 }

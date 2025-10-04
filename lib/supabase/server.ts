@@ -6,13 +6,22 @@ import { cache } from "react";
 export const isSupabaseConfigured =
   typeof process.env.NEXT_PUBLIC_SUPABASE_URL === "string" &&
   process.env.NEXT_PUBLIC_SUPABASE_URL.length > 0 &&
+  process.env.NEXT_PUBLIC_SUPABASE_URL !== "your_actual_supabase_project_url" &&
   typeof process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY === "string" &&
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY.length > 0;
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY.length > 0 &&
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY !== "your_actual_supabase_anon_key";
 
 // Admin client for bypassing email confirmation
 export const createAdminClient = () => {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  console.log("Creating admin client with:", {
+    supabaseUrl: supabaseUrl ? "SET" : "NOT SET",
+    supabaseServiceRoleKey: supabaseServiceRoleKey ? "SET" : "NOT SET",
+    supabaseUrlLength: supabaseUrl?.length,
+    supabaseServiceRoleKeyLength: supabaseServiceRoleKey?.length,
+  });
 
   // Check if environment variables are properly set
   if (!supabaseUrl || !supabaseServiceRoleKey) {
@@ -24,6 +33,16 @@ export const createAdminClient = () => {
   if (supabaseUrl.length === 0 || supabaseServiceRoleKey.length === 0) {
     throw new Error(
       "Supabase environment variables are empty. Please check your .env.local file."
+    );
+  }
+
+  // Check if using placeholder values
+  if (
+    supabaseUrl === "your_actual_supabase_project_url" ||
+    supabaseServiceRoleKey === "your_actual_supabase_service_role_key"
+  ) {
+    throw new Error(
+      "Supabase environment variables are using placeholder values. Please update your .env.local file with actual values."
     );
   }
 
@@ -39,8 +58,14 @@ export const createClient = cache(() => {
   // Check if Supabase is properly configured
   if (!isSupabaseConfigured) {
     console.warn(
-      "Supabase environment variables are not set. Using dummy client."
+      "Supabase environment variables are not set or are using placeholder values. Using dummy client."
     );
+    console.log("Current env values:", {
+      url: process.env.NEXT_PUBLIC_SUPABASE_URL,
+      key: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+        ? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY.substring(0, 10) + "..."
+        : "NOT SET",
+    });
     return {
       auth: {
         getUser: () => Promise.resolve({ data: { user: null }, error: null }),

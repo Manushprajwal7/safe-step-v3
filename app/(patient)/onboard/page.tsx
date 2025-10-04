@@ -12,16 +12,16 @@ export default async function OnboardPage() {
     redirect("/auth/login");
   }
 
-  // Check onboarding completion via presence of record in onboarding table
-  const { data: onboarding } = await supabase
-    .from("onboarding")
-    .select("id")
+  // Check onboarding completion via the onboarding_completed field in profiles table
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("onboarding_completed")
     .eq("user_id", user.id)
-    .limit(1)
-    .maybeSingle();
+    .single();
 
-  if (onboarding) {
-    redirect("/home"); // align to (patient) route group path
+  // If onboarding is already completed, redirect to home
+  if (profile && profile.onboarding_completed) {
+    redirect("/home");
   }
 
   return (
