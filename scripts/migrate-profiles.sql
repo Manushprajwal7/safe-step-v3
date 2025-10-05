@@ -39,6 +39,21 @@ CREATE TABLE IF NOT EXISTS onboarding (
   UNIQUE(user_id)
 );
 
+-- Create assessments table if it doesn't exist
+CREATE TABLE IF NOT EXISTS assessments (
+  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+  user_id UUID REFERENCES auth.users ON DELETE CASCADE NOT NULL,
+  check_date TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  symptoms TEXT[],
+  feeling TEXT CHECK (feeling IN ('good', 'okay', 'bad')),
+  notes TEXT,
+  score INTEGER,
+  duration INTEGER, -- in minutes
+  assessment_type TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
 -- Drop existing policies if they exist
 DROP POLICY IF EXISTS "Users can view their own profile" ON profiles;
 DROP POLICY IF EXISTS "Users can update their own profile" ON profiles;
@@ -75,9 +90,28 @@ CREATE POLICY "Users can insert their own onboarding data"
 ON onboarding FOR INSERT 
 WITH CHECK (user_id = auth.uid());
 
+-- Drop existing policies if they exist for assessments
+DROP POLICY IF EXISTS "Users can view their own assessments" ON assessments;
+DROP POLICY IF EXISTS "Users can update their own assessments" ON assessments;
+DROP POLICY IF EXISTS "Users can insert their own assessments" ON assessments;
+
+-- Create policies for assessments
+CREATE POLICY "Users can view their own assessments" 
+ON assessments FOR SELECT 
+USING (user_id = auth.uid());
+
+CREATE POLICY "Users can update their own assessments" 
+ON assessments FOR UPDATE 
+USING (user_id = auth.uid());
+
+CREATE POLICY "Users can insert their own assessments" 
+ON assessments FOR INSERT 
+WITH CHECK (user_id = auth.uid());
+
 -- Drop triggers if they exist
 DROP TRIGGER IF EXISTS update_profiles_updated_at ON profiles;
 DROP TRIGGER IF EXISTS update_onboarding_updated_at ON onboarding;
+DROP TRIGGER IF EXISTS update_assessments_updated_at ON assessments;
 
 -- Recreate triggers
 CREATE TRIGGER update_profiles_updated_at 
@@ -90,6 +124,11 @@ CREATE TRIGGER update_onboarding_updated_at
     FOR EACH ROW 
     EXECUTE PROCEDURE update_updated_at_column();
 
+CREATE TRIGGER update_assessments_updated_at 
+    BEFORE UPDATE ON assessments 
+    FOR EACH ROW 
+    EXECUTE PROCEDURE update_updated_at_column();
+
 -- Enable RLS if not already enabled
 ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE onboarding ENABLE ROW LEVEL SECURITY;
@@ -98,6 +137,8 @@ ALTER TABLE onboarding ENABLE ROW LEVEL SECURITY;
 CREATE INDEX IF NOT EXISTS idx_profiles_user_id ON profiles(user_id);
 CREATE INDEX IF NOT EXISTS idx_profiles_role ON profiles(role);
 CREATE INDEX IF NOT EXISTS idx_onboarding_user_id ON onboarding(user_id);
+CREATE INDEX IF NOT EXISTS idx_assessments_user_id ON assessments(user_id);
+CREATE INDEX IF NOT EXISTS idx_assessments_check_date ON assessments(check_date);
 
 -- Refresh schema cache
 NOTIFY pgrst, 'reload schema';

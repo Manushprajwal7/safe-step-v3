@@ -46,6 +46,9 @@ const createDummyClient = () => {
       insert: function (data: any) {
         return Promise.resolve({ data: null, error: null });
       },
+      update: function (data: any) {
+        return this;
+      },
     };
   };
 

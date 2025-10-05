@@ -1,32 +1,61 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { Progress } from "@/components/ui/progress"
-import { motion } from "framer-motion"
-import { Play, Pause, Square, Activity, Thermometer, Zap, Timer, Target, AlertTriangle } from "lucide-react"
+import { useState } from "react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
+import { motion } from "framer-motion";
+import {
+  Play,
+  Pause,
+  Square,
+  Activity,
+  Thermometer,
+  Zap,
+  Timer,
+  Target,
+  AlertTriangle,
+} from "lucide-react";
 
 export default function PatientSession() {
-  const [isSessionActive, setIsSessionActive] = useState(false)
-  const [sessionTime, setSessionTime] = useState(0)
+  const [isSessionActive, setIsSessionActive] = useState(false);
+  const [sessionTime, setSessionTime] = useState(0);
   const [sessionData] = useState({
     temperature: 36.2,
     pressure: 85,
     activity: 72,
     riskLevel: "low",
-  })
+  });
 
   return (
     <div className="container mx-auto px-4 py-6 space-y-6">
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3 }}
+      >
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h1 className="text-2xl font-serif font-bold text-foreground">Live Session</h1>
-            <p className="text-muted-foreground">Real-time foot health monitoring</p>
+            <h1 className="text-2xl font-serif font-bold text-foreground">
+              Live Session
+            </h1>
+            <p className="text-muted-foreground">
+              Real-time diabetes and arthritis foot health monitoring
+            </p>
           </div>
-          <Badge variant="outline" className={isSessionActive ? "bg-primary/10 text-primary" : "bg-muted"}>
+          <Badge
+            variant="outline"
+            className={
+              isSessionActive ? "bg-primary/10 text-primary" : "bg-muted"
+            }
+          >
             {isSessionActive ? "Active" : "Inactive"}
           </Badge>
         </div>
@@ -35,15 +64,25 @@ export default function PatientSession() {
         <Card className="mb-6">
           <CardHeader>
             <CardTitle>Session Controls</CardTitle>
-            <CardDescription>Start, pause, or stop your monitoring session</CardDescription>
+            <CardDescription>
+              Start, pause, or stop your monitoring session
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="flex items-center gap-4">
               <Button
                 onClick={() => setIsSessionActive(!isSessionActive)}
-                className={isSessionActive ? "bg-destructive hover:bg-destructive/90" : ""}
+                className={
+                  isSessionActive
+                    ? "bg-destructive hover:bg-destructive/90"
+                    : ""
+                }
               >
-                {isSessionActive ? <Pause className="w-4 h-4 mr-2" /> : <Play className="w-4 h-4 mr-2" />}
+                {isSessionActive ? (
+                  <Pause className="w-4 h-4 mr-2" />
+                ) : (
+                  <Play className="w-4 h-4 mr-2" />
+                )}
                 {isSessionActive ? "Pause Session" : "Start Session"}
               </Button>
               <Button variant="outline" disabled={!isSessionActive}>
@@ -73,7 +112,9 @@ export default function PatientSession() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold text-primary mb-2">{sessionData.temperature}°C</div>
+              <div className="text-3xl font-bold text-primary mb-2">
+                {sessionData.temperature}°C
+              </div>
               <p className="text-sm text-muted-foreground">Normal range</p>
               <Progress value={75} className="mt-3 h-2" />
             </CardContent>
@@ -87,7 +128,9 @@ export default function PatientSession() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold text-accent mb-2">{sessionData.pressure}%</div>
+              <div className="text-3xl font-bold text-accent mb-2">
+                {sessionData.pressure}%
+              </div>
               <p className="text-sm text-muted-foreground">Optimal pressure</p>
               <Progress value={sessionData.pressure} className="mt-3 h-2" />
             </CardContent>
@@ -101,8 +144,12 @@ export default function PatientSession() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold text-chart-2 mb-2">{sessionData.activity}%</div>
-              <p className="text-sm text-muted-foreground">Good activity level</p>
+              <div className="text-3xl font-bold text-chart-2 mb-2">
+                {sessionData.activity}%
+              </div>
+              <p className="text-sm text-muted-foreground">
+                Good activity level
+              </p>
               <Progress value={sessionData.activity} className="mt-3 h-2" />
             </CardContent>
           </Card>
@@ -112,14 +159,18 @@ export default function PatientSession() {
         <Card>
           <CardHeader>
             <CardTitle>Pressure Heatmap</CardTitle>
-            <CardDescription>Real-time visualization of foot pressure distribution</CardDescription>
+            <CardDescription>
+              Real-time visualization of foot pressure distribution
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="aspect-video bg-gradient-to-br from-muted/20 to-muted/40 rounded-lg flex items-center justify-center">
               <div className="text-center">
                 <Activity className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
                 <p className="text-muted-foreground">
-                  {isSessionActive ? "Live heatmap data will appear here" : "Start a session to view heatmap"}
+                  {isSessionActive
+                    ? "Live heatmap data will appear here"
+                    : "Start a session to view heatmap"}
                 </p>
               </div>
             </div>
@@ -133,21 +184,31 @@ export default function PatientSession() {
               <Target className="w-5 h-5 text-primary" />
               Session Insights
             </CardTitle>
-            <CardDescription>Real-time analysis and recommendations</CardDescription>
+            <CardDescription>
+              Real-time analysis and recommendations
+            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="flex items-start gap-3 p-3 bg-primary/5 rounded-lg border border-primary/10">
               <div className="w-2 h-2 bg-primary rounded-full mt-2"></div>
               <div>
-                <p className="text-sm font-medium">Pressure distribution looks good</p>
-                <p className="text-xs text-muted-foreground">No concerning pressure points detected</p>
+                <p className="text-sm font-medium">
+                  Pressure distribution looks good
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  No concerning pressure points detected
+                </p>
               </div>
             </div>
             <div className="flex items-start gap-3 p-3 bg-accent/5 rounded-lg border border-accent/10">
               <div className="w-2 h-2 bg-accent rounded-full mt-2"></div>
               <div>
-                <p className="text-sm font-medium">Temperature within normal range</p>
-                <p className="text-xs text-muted-foreground">No signs of inflammation</p>
+                <p className="text-sm font-medium">
+                  Temperature within normal range
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  No signs of inflammation
+                </p>
               </div>
             </div>
             {isSessionActive && (
@@ -155,7 +216,9 @@ export default function PatientSession() {
                 <AlertTriangle className="w-4 h-4 text-chart-3 mt-0.5" />
                 <div>
                   <p className="text-sm font-medium">Session in progress</p>
-                  <p className="text-xs text-muted-foreground">Continue monitoring for best results</p>
+                  <p className="text-xs text-muted-foreground">
+                    Continue monitoring for best results
+                  </p>
                 </div>
               </div>
             )}
@@ -163,5 +226,5 @@ export default function PatientSession() {
         </Card>
       </motion.div>
     </div>
-  )
+  );
 }

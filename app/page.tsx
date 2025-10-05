@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { Heart, Loader2, Activity, Shield, Users } from "lucide-react";
+import { Heart, Loader2, Activity, Shield, Users, X } from "lucide-react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase/client";
 import Image from "next/image";
@@ -46,6 +46,7 @@ const CardDescription = ({ children }: { children: React.ReactNode }) => (
 export default function LandingPage() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(true);
+  const [showDeviceModal, setShowDeviceModal] = useState(false);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -119,9 +120,9 @@ export default function LandingPage() {
                 <span className="text-green-600 block">Monitoring</span>
               </h1>
               <p className="text-xl text-gray-600 leading-relaxed">
-                Comprehensive diabetic foot care with real-time pressure
-                monitoring, AI-powered analysis, and personalized health
-                insights.
+                Comprehensive diabetic and arthritis foot care with real-time
+                pressure monitoring, AI-powered analysis, and personalized
+                health insights.
               </p>
               <div className="flex flex-col sm:flex-row gap-4">
                 <Link href="/auth/register">
@@ -136,6 +137,7 @@ export default function LandingPage() {
                   size="lg"
                   variant="outline"
                   className="text-base px-8 py-6 bg-white border-green-600 text-green-600 hover:bg-green-50"
+                  onClick={() => setShowDeviceModal(true)}
                 >
                   Learn More
                 </Button>
@@ -242,7 +244,7 @@ export default function LandingPage() {
           </h2>
           <p className="text-xl mb-8 opacity-90">
             Join thousands of patients who trust Safe Step for comprehensive
-            diabetic foot care monitoring.
+            diabetic and arthritis foot care monitoring.
           </p>
           <Link href="/auth/register">
             <Button
@@ -269,11 +271,211 @@ export default function LandingPage() {
               </span>
             </div>
             <p className="text-gray-600 text-center md:text-right">
-              © 2024 Safe Step Health. Advanced diabetic foot care monitoring.
+              © {new Date().getFullYear()} Safe Step Health. Advanced diabetic
+              and arthritis foot care monitoring.
             </p>
           </div>
         </div>
       </footer>
+
+      {/* Device Information Modal */}
+      {showDeviceModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-2xl font-serif font-bold text-gray-800">
+                  Our Monitoring Technology
+                </h2>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setShowDeviceModal(false)}
+                >
+                  <X className="w-6 h-6" />
+                </Button>
+              </div>
+
+              <div className="grid md:grid-cols-2 gap-8">
+                <div>
+                  <h3 className="text-xl font-semibold mb-4 text-green-600">
+                    Diabetes & Arthritis Monitoring Prototype
+                  </h3>
+                  <p className="text-gray-600 mb-6">
+                    Our innovative device combines advanced sensor technology
+                    with AI-powered analytics to provide non-invasive monitoring
+                    of diabetic foot complications and arthritis symptoms.
+                  </p>
+
+                  <div className="space-y-4">
+                    <div className="flex items-start gap-3">
+                      <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
+                        <Activity className="w-4 h-4 text-green-600" />
+                      </div>
+                      <div>
+                        <h4 className="font-medium text-gray-800">
+                          Load Sensors
+                        </h4>
+                        <p className="text-sm text-gray-600">
+                          High-precision load sensors detect subtle changes in
+                          foot pressure distribution, identifying potential
+                          problem areas before they become serious.
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-start gap-3">
+                      <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
+                        <Shield className="w-4 h-4 text-green-600" />
+                      </div>
+                      <div>
+                        <h4 className="font-medium text-gray-800">
+                          ESP32 Microcontroller
+                        </h4>
+                        <p className="text-sm text-gray-600">
+                          The powerful ESP32 processor collects and processes
+                          sensor data in real-time, enabling immediate feedback
+                          and analysis.
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-start gap-3">
+                      <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
+                        <Heart className="w-4 h-4 text-green-600" />
+                      </div>
+                      <div>
+                        <h4 className="font-medium text-gray-800">
+                          Pressure Heat Map
+                        </h4>
+                        <p className="text-sm text-gray-600">
+                          Visual representation of pressure distribution across
+                          the foot, highlighting areas of concern for diabetic
+                          ulcers or arthritis inflammation.
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-start gap-3">
+                      <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
+                        <Users className="w-4 h-4 text-green-600" />
+                      </div>
+                      <div>
+                        <h4 className="font-medium text-gray-800">
+                          AI Analysis
+                        </h4>
+                        <p className="text-sm text-gray-600">
+                          Machine learning algorithms analyze pressure patterns
+                          to predict the development of diabetic foot ulcers and
+                          arthritis progression with high accuracy.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <div className="bg-gray-100 rounded-lg p-6 mb-6">
+                    <h4 className="font-semibold text-gray-800 mb-3">
+                      Key Benefits
+                    </h4>
+                    <ul className="space-y-2 text-sm text-gray-600">
+                      <li className="flex items-start gap-2">
+                        <span className="text-green-600">•</span>
+                        <span>Non-invasive monitoring with no discomfort</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="text-green-600">•</span>
+                        <span>Early detection of potential complications</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="text-green-600">•</span>
+                        <span>Real-time alerts for immediate action</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="text-green-600">•</span>
+                        <span>Personalized risk assessment reports</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="text-green-600">•</span>
+                        <span>
+                          Integration with healthcare provider systems
+                        </span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="text-green-600">•</span>
+                        <span>Long-term trend analysis for better care</span>
+                      </li>
+                    </ul>
+                  </div>
+
+                  <div className="bg-blue-50 rounded-lg p-6">
+                    <h4 className="font-semibold text-gray-800 mb-3">
+                      How It Works
+                    </h4>
+                    <div className="space-y-3">
+                      <div className="flex items-start gap-3">
+                        <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0 text-xs font-medium text-blue-800">
+                          1
+                        </div>
+                        <p className="text-sm text-gray-600">
+                          Patient stands on the device platform for 30 seconds
+                        </p>
+                      </div>
+                      <div className="flex items-start gap-3">
+                        <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0 text-xs font-medium text-blue-800">
+                          2
+                        </div>
+                        <p className="text-sm text-gray-600">
+                          Load sensors capture pressure distribution data
+                        </p>
+                      </div>
+                      <div className="flex items-start gap-3">
+                        <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0 text-xs font-medium text-blue-800">
+                          3
+                        </div>
+                        <p className="text-sm text-gray-600">
+                          ESP32 processes data and creates pressure heat map
+                        </p>
+                      </div>
+                      <div className="flex items-start gap-3">
+                        <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0 text-xs font-medium text-blue-800">
+                          4
+                        </div>
+                        <p className="text-sm text-gray-600">
+                          AI algorithms analyze patterns and predict risks
+                        </p>
+                      </div>
+                      <div className="flex items-start gap-3">
+                        <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0 text-xs font-medium text-blue-800">
+                          5
+                        </div>
+                        <p className="text-sm text-gray-600">
+                          Results sent to patient and healthcare provider
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-8 pt-6 border-t border-gray-200">
+                <div className="flex flex-col sm:flex-row gap-4 justify-between items-center">
+                  <p className="text-gray-600">
+                    Experience the future of diabetic and arthritis foot care
+                    today.
+                  </p>
+                  <Link href="/auth/register">
+                    <Button className="bg-green-600 hover:bg-green-700">
+                      Get Started with Safe Step
+                    </Button>
+                  </Link>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

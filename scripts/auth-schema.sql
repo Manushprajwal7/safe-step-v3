@@ -50,6 +50,21 @@ CREATE TABLE IF NOT EXISTS onboarding (
   UNIQUE(user_id)
 );
 
+-- Create assessments table for health assessments
+CREATE TABLE IF NOT EXISTS assessments (
+  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+  user_id UUID REFERENCES auth.users ON DELETE CASCADE NOT NULL,
+  check_date TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  symptoms TEXT[],
+  feeling TEXT CHECK (feeling IN ('good', 'okay', 'bad')),
+  notes TEXT,
+  score INTEGER,
+  duration INTEGER, -- in minutes
+  assessment_type TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
 -- Create update trigger function
 CREATE OR REPLACE FUNCTION update_updated_at_column()
 RETURNS TRIGGER AS $$
@@ -70,6 +85,13 @@ CREATE TRIGGER update_profiles_updated_at
 DROP TRIGGER IF EXISTS update_onboarding_updated_at ON onboarding;
 CREATE TRIGGER update_onboarding_updated_at 
     BEFORE UPDATE ON onboarding 
+    FOR EACH ROW 
+    EXECUTE PROCEDURE update_updated_at_column();
+
+-- Drop triggers if they exist and create trigger for assessments table
+DROP TRIGGER IF EXISTS update_assessments_updated_at ON assessments;
+CREATE TRIGGER update_assessments_updated_at 
+    BEFORE UPDATE ON assessments 
     FOR EACH ROW 
     EXECUTE PROCEDURE update_updated_at_column();
 
@@ -141,6 +163,23 @@ CREATE POLICY "Users can insert their own onboarding data"
 ON onboarding FOR INSERT 
 WITH CHECK (user_id = auth.uid());
 
+-- Assessments policies
+DROP POLICY IF EXISTS "Users can view their own assessments" ON assessments;
+DROP POLICY IF EXISTS "Users can update their own assessments" ON assessments;
+DROP POLICY IF EXISTS "Users can insert their own assessments" ON assessments;
+
+CREATE POLICY "Users can view their own assessments" 
+ON assessments FOR SELECT 
+USING (user_id = auth.uid());
+
+CREATE POLICY "Users can update their own assessments" 
+ON assessments FOR UPDATE 
+USING (user_id = auth.uid());
+
+CREATE POLICY "Users can insert their own assessments" 
+ON assessments FOR INSERT 
+WITH CHECK (user_id = auth.uid());
+
 -- Grant permissions
 GRANT USAGE ON SCHEMA public TO postgres, anon, authenticated, service_role;
 GRANT ALL ON ALL TABLES IN SCHEMA public TO postgres, anon, authenticated, service_role;
@@ -151,6 +190,8 @@ GRANT ALL ON ALL FUNCTIONS IN SCHEMA public TO postgres, anon, authenticated, se
 CREATE INDEX IF NOT EXISTS idx_profiles_user_id ON profiles(user_id);
 CREATE INDEX IF NOT EXISTS idx_profiles_role ON profiles(role);
 CREATE INDEX IF NOT EXISTS idx_onboarding_user_id ON onboarding(user_id);
+CREATE INDEX IF NOT EXISTS idx_assessments_user_id ON assessments(user_id);
+CREATE INDEX IF NOT EXISTS idx_assessments_check_date ON assessments(check_date);
 
 -- Disable email confirmation requirement
 -- This is configured in Supabase Auth settings, not in SQL
