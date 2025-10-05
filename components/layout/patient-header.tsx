@@ -32,10 +32,10 @@ export default function PatientHeader() {
       animate={{ y: 0 }}
       transition={{ type: "spring", stiffness: 300, damping: 30 }}
     >
-      <div className="container mx-auto px-4 py-4 flex items-center justify-between">
+      <div className="container mx-auto px-3 py-3 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <motion.div
-            className="w-10 h-10 bg-green-600 rounded-xl flex items-center justify-center"
+            className="w-10 h-10 bg-green-600 rounded-xl flex items-center justify-center sm:hidden"
             whileHover={{
               scale: 1.05,
               rotate: [0, -5, 5, 0],
@@ -45,7 +45,7 @@ export default function PatientHeader() {
           >
             <Heart className="w-6 h-6 text-white" />
           </motion.div>
-          <div>
+          <div className="sm:hidden">
             <motion.h1
               className="text-xl font-serif font-bold text-gray-800"
               initial={{ opacity: 0, x: -20 }}
@@ -55,7 +55,7 @@ export default function PatientHeader() {
               Safe Step
             </motion.h1>
             <motion.p
-              className="text-sm text-gray-600 hidden sm:block"
+              className="text-sm text-gray-600"
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.3, duration: 0.5 }}

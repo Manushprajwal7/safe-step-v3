@@ -64,15 +64,29 @@ function LoginContent() {
           router.push("/home");
         }
       } else if (profileError && profileError.code === "PGRST116") {
-        // No profile found, redirect to onboard
-        router.push("/onboard");
+        // No profile found, create one using upsert
+        const { error: createProfileError } = await supabase
+          .from("profiles")
+          .upsert([
+            {
+              user_id: userId,
+              role: "patient",
+              onboarding_completed: false,
+            },
+          ]);
+
+        if (!createProfileError) {
+          router.push("/onboard");
+        } else {
+          console.error("Profile creation error:", createProfileError);
+          router.push("/onboard");
+        }
       } else {
-        // Default redirect if profile not found or other error
+        // Default redirect if profile not found
         router.push("/onboard");
       }
     } catch (error) {
       console.error("Error handling user redirect:", error);
-      // Even if there's an error, redirect to a safe place
       router.push("/onboard");
     }
   };
@@ -82,28 +96,58 @@ function LoginContent() {
     setIsLoading(true);
 
     try {
-      // Use our new API route for login
-      const formData = new FormData();
-      formData.append("email", email);
-      formData.append("password", password);
-
-      const response = await fetch("/api/auth/login", {
-        method: "POST",
-        body: formData,
-        // Make sure credentials are included
-        credentials: "include",
+      // Simple login attempt
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
       });
 
-      const result = await response.json();
+      if (error) {
+        // Handle specific error cases
+        if (error.message.includes("Email not confirmed")) {
+          // Try to confirm the user and login again
+          try {
+            const {
+              data: { users },
+              error: listError,
+            } = await supabase.auth.admin.listUsers();
 
-      if (!response.ok) {
-        throw new Error(result.error || "An error occurred during login");
+            if (!listError && users) {
+              const user = users.find((u) => u.email === email);
+              if (user) {
+                // Confirm the user
+                const { error: confirmError } =
+                  await supabase.auth.admin.updateUserById(user.id, {
+                    email_confirm: true,
+                  });
+
+                if (!confirmError) {
+                  // Try login again
+                  const { data: retryData, error: retryError } =
+                    await supabase.auth.signInWithPassword({
+                      email,
+                      password,
+                    });
+
+                  if (!retryError && retryData.user) {
+                    await handleUserRedirect(retryData.user.id);
+                    return;
+                  }
+                }
+              }
+            }
+          } catch (confirmError) {
+            console.error("Error confirming user:", confirmError);
+          }
+        }
+
+        // If we get here, show the error
+        throw new Error(error.message);
       }
 
       // If we get here, authentication was successful
-      if (result.user) {
-        // Force a page reload to ensure the session is properly set
-        window.location.href = "/onboard";
+      if (data.user) {
+        await handleUserRedirect(data.user.id);
       }
     } catch (error: any) {
       console.error("Login error:", error);

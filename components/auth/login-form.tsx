@@ -1,24 +1,27 @@
-"use client"
+"use client";
 
-import { useRouter } from 'next/navigation'
-import { useEffect, useState } from 'react'
-import { useFormState, useFormStatus } from "react-dom"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Label } from "@/components/ui/label"
-import { Loader2, Mail, Lock, Eye, EyeOff } from "lucide-react"
-import Link from "next/link"
-import { signIn } from "@/lib/actions"
-import { signInWithGoogle } from "@/lib/auth-utils"
-import { Separator } from "@/components/ui/separator"
-import { Icons } from "@/components/icons"
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { useFormState, useFormStatus } from "react-dom";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
+import { Loader2, Mail, Lock, Eye, EyeOff } from "lucide-react";
+import Link from "next/link";
+import { signIn } from "@/lib/actions";
 
 function SubmitButton({ isSubmitting }: { isSubmitting: boolean }) {
   return (
-    <Button 
-      type="submit" 
-      disabled={isSubmitting} 
+    <Button
+      type="submit"
+      disabled={isSubmitting}
       className="w-full h-12 text-base font-medium"
     >
       {isSubmitting ? (
@@ -30,60 +33,43 @@ function SubmitButton({ isSubmitting }: { isSubmitting: boolean }) {
         "Sign In"
       )}
     </Button>
-  )
+  );
 }
 
 export default function LoginForm() {
-  const [state, formAction] = useFormState(signIn, null)
-  const router = useRouter()
-  const [showPassword, setShowPassword] = useState(false)
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [isGoogleLoading, setIsGoogleLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [state, formAction] = useFormState(signIn, null);
+  const router = useRouter();
+  const [showPassword, setShowPassword] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   // Handle form state changes
   useEffect(() => {
     if (state) {
-      if (state.success) {
-        router.push('/home')
-        router.refresh()
+      // Check if state has a success property and it's true
+      if ("success" in state && state.success) {
+        router.push("/home");
+        router.refresh();
       } else if (state.error) {
-        setError(state.error)
+        setError(state.error);
       }
-      setIsSubmitting(false)
-      setIsGoogleLoading(false)
+      setIsSubmitting(false);
     }
-  }, [state, router])
-
-  const handleGoogleSignIn = async () => {
-    try {
-      setError(null)
-      setIsGoogleLoading(true)
-      const { error } = await signInWithGoogle()
-      if (error) {
-        setError(error.message || 'Failed to sign in with Google')
-      }
-    } catch (error) {
-      console.error('Unexpected error during Google sign in:', error)
-      setError('An unexpected error occurred. Please try again.')
-    } finally {
-      setIsGoogleLoading(false)
-    }
-  }
+  }, [state, router]);
 
   const handleFormSubmit = async (formData: FormData) => {
-    setError(null)
-    setIsSubmitting(true)
-    
+    setError(null);
+    setIsSubmitting(true);
+
     // Call the server action
-    const result = await signIn({}, formData)
-    
+    const result = await signIn({}, formData);
+
     // The state will be updated by the useFormState hook
     if (result?.error) {
-      setError(result.error)
-      setIsSubmitting(false)
+      setError(result.error);
+      setIsSubmitting(false);
     }
-  }
+  };
 
   return (
     <Card className="w-full max-w-md mx-auto shadow-lg border-0 bg-white/80 backdrop-blur-sm">
@@ -94,23 +80,6 @@ export default function LoginForm() {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        <Button
-          variant="outline"
-          type="button"
-          disabled={isGoogleLoading}
-          onClick={handleGoogleSignIn}
-          className="w-full h-12 flex items-center justify-center gap-2 text-base"
-        >
-          {isGoogleLoading ? (
-            <Icons.spinner className="h-5 w-5 animate-spin" />
-          ) : (
-            <Icons.google className="h-5 w-5" />
-          )}
-          Continue with Google
-        </Button>
-
-     
-
         <form action={handleFormSubmit} className="space-y-4">
           {error && (
             <div className="bg-destructive/10 border border-destructive/20 text-destructive px-4 py-3 rounded-lg text-sm">
@@ -191,5 +160,5 @@ export default function LoginForm() {
         </form>
       </CardContent>
     </Card>
-  )
+  );
 }

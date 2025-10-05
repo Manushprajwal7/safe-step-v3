@@ -1,6 +1,5 @@
 import { cookies } from "next/headers";
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
-import { createRouteHandlerClient } from "@supabase/auth-helpers-nextjs";
 
 export function getServerSupabase() {
   const cookieStore = cookies();
@@ -87,7 +86,23 @@ export async function requireAdmin() {
 // Create a supabase client for route handlers
 export const createClient = () => {
   const cookieStore = cookies();
-  return createRouteHandlerClient({ cookies: () => cookieStore });
+
+  return createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return cookieStore.getAll();
+        },
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value, options }) => {
+            cookieStore.set(name, value, options);
+          });
+        },
+      },
+    }
+  );
 };
 
 // Get user role by user ID

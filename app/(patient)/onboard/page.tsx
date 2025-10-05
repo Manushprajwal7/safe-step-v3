@@ -20,7 +20,8 @@ export default async function OnboardPage() {
     .single();
 
   // If onboarding is already completed, redirect to home
-  if (profile && profile.onboarding_completed) {
+  // Handle both false and null cases
+  if (profile && profile.onboarding_completed === true) {
     redirect("/home");
   }
 

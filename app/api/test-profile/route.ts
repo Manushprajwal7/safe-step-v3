@@ -24,38 +24,26 @@ export async function GET() {
 
   const {
     data: { user },
-    error,
+    error: userError,
   } = await supabase.auth.getUser();
 
-  if (error || !user) {
+  if (userError || !user) {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   }
 
   // Get user profile
   const { data: profile, error: profileError } = await supabase
     .from("profiles")
-    .select("role, onboarding_completed")
+    .select("*")
     .eq("user_id", user.id)
     .single();
-
-  if (profileError) {
-    // Return default values if profile doesn't exist
-    return NextResponse.json({
-      user: {
-        id: user.id,
-        email: user.email,
-        role: "patient",
-        onboarding_completed: false,
-      },
-    });
-  }
 
   return NextResponse.json({
     user: {
       id: user.id,
       email: user.email,
-      role: profile.role || "patient",
-      onboarding_completed: profile.onboarding_completed || false,
     },
+    profile,
+    profileError,
   });
 }

@@ -8,7 +8,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { signUp } from "@/lib/actions";
 import { supabase } from "@/lib/supabase/client";
 
 export default function RegisterPage() {
@@ -43,11 +42,17 @@ export default function RegisterPage() {
     formData.append("password", password);
 
     try {
-      const result = await signUp(null, formData);
+      // Use API route for registration instead of server action
+      const response = await fetch("/api/auth/register", {
+        method: "POST",
+        body: formData,
+      });
 
-      if (result?.error) {
-        toast.error(result.error);
-      } else if (result?.success) {
+      const result = await response.json();
+
+      if (!response.ok) {
+        toast.error(result.error || "An error occurred during registration");
+      } else if (result.success) {
         // Redirect to login page with success message
         router.push("/auth/login?registered=true");
       }

@@ -17,164 +17,130 @@ export async function updateSession(request: NextRequest) {
     });
   }
 
-  try {
-    let response = NextResponse.next({
-      request: {
-        headers: request.headers,
-      },
-    });
+  let response = NextResponse.next({
+    request: {
+      headers: request.headers,
+    },
+  });
 
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          get(name: string) {
-            return request.cookies.get(name)?.value;
-          },
-          set(name: string, value: string, options: any) {
-            request.cookies.set({
-              name,
-              value,
-              ...options,
-            });
-            response = NextResponse.next({
-              request: {
-                headers: request.headers,
-              },
-            });
-            response.cookies.set({
-              name,
-              value,
-              ...options,
-            });
-          },
-          remove(name: string, options: any) {
-            request.cookies.set({
-              name,
-              value: "",
-              ...options,
-            });
-            response = NextResponse.next({
-              request: {
-                headers: request.headers,
-              },
-            });
-            response.cookies.set({
-              name,
-              value: "",
-              ...options,
-            });
-          },
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return request.cookies.getAll();
         },
-      }
-    );
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value, options }) => {
+            response.cookies.set(name, value, options);
+          });
+        },
+      },
+    }
+  );
 
-    const requestUrl = new URL(request.url);
-    const code = requestUrl.searchParams.get("code");
+  // Get the user (more secure than getSession)
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
-    if (code) {
-      await supabase.auth.exchangeCodeForSession(code);
-      return NextResponse.redirect(new URL("/onboard", request.url));
+  // Debug logging
+  console.log("Middleware check:", {
+    pathname: request.nextUrl.pathname,
+    hasSession: !!user,
+    sessionId: user?.id,
+  });
+
+  // Define public routes that don't require authentication
+  const isPublicRoute =
+    request.nextUrl.pathname === "/" ||
+    request.nextUrl.pathname.startsWith("/auth/") ||
+    request.nextUrl.pathname.startsWith("/_next/") ||
+    request.nextUrl.pathname.startsWith("/api/");
+
+  // If the route requires authentication and there's no user, redirect to login
+  if (!isPublicRoute && !user) {
+    console.log("No session, redirecting to login");
+    const redirectUrl = new URL("/auth/login", request.url);
+    return NextResponse.redirect(redirectUrl);
+  }
+
+  // If the user is logged in and trying to access auth pages, redirect to appropriate dashboard
+  if (user && request.nextUrl.pathname.startsWith("/auth/")) {
+    // Special case: Don't redirect if user is on login page - let the page handle it
+    if (request.nextUrl.pathname === "/auth/login") {
+      console.log("User on login page, allowing access");
+      return response;
     }
 
-    // Get the session
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
+    console.log("Authenticated user:", user.id);
+    const { data: profile, error: profileError } = await supabase
+      .from("profiles")
+      .select("role, onboarding_completed")
+      .eq("user_id", user.id)
+      .single();
 
-    // Define public routes that don't require authentication
-    const isPublicRoute =
-      request.nextUrl.pathname === "/" ||
-      request.nextUrl.pathname.startsWith("/auth/") ||
-      request.nextUrl.pathname.startsWith("/_next/") ||
-      request.nextUrl.pathname.startsWith("/api/");
+    console.log("Profile check:", { profile, profileError });
 
-    // If the route requires authentication and there's no session, redirect to login
-    if (!isPublicRoute && !session) {
-      const redirectUrl = new URL("/auth/login", request.url);
+    if (!profileError && profile) {
+      if (!profile.onboarding_completed) {
+        console.log("Profile not completed, redirecting to onboard");
+        const redirectUrl = new URL("/onboard", request.url);
+        return NextResponse.redirect(redirectUrl);
+      } else if (profile.role === "admin") {
+        console.log("Admin user, redirecting to admin dashboard");
+        const redirectUrl = new URL("/admin/dashboard", request.url);
+        return NextResponse.redirect(redirectUrl);
+      } else {
+        console.log("Regular user, redirecting to home");
+        const redirectUrl = new URL("/home", request.url);
+        return NextResponse.redirect(redirectUrl);
+      }
+    } else if (profileError && profileError.code === "PGRST116") {
+      // No profile found, redirect to onboard
+      console.log("No profile found, redirecting to onboard");
+      const redirectUrl = new URL("/onboard", request.url);
+      return NextResponse.redirect(redirectUrl);
+    } else {
+      // Default redirect if profile not found
+      console.log("Profile error, redirecting to onboard");
+      const redirectUrl = new URL("/onboard", request.url);
       return NextResponse.redirect(redirectUrl);
     }
-
-    // If the user is logged in and trying to access auth pages, redirect to appropriate dashboard
-    if (session && request.nextUrl.pathname.startsWith("/auth/")) {
-      // Get user profile to determine where to redirect
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (user) {
-        const { data: profile, error: profileError } = await supabase
-          .from("profiles")
-          .select("role, onboarding_completed")
-          .eq("user_id", user.id)
-          .single();
-
-        if (!profileError && profile) {
-          if (!profile.onboarding_completed) {
-            const redirectUrl = new URL("/onboard", request.url);
-            return NextResponse.redirect(redirectUrl);
-          } else if (profile.role === "admin") {
-            const redirectUrl = new URL("/admin/dashboard", request.url);
-            return NextResponse.redirect(redirectUrl);
-          } else {
-            const redirectUrl = new URL("/home", request.url);
-            return NextResponse.redirect(redirectUrl);
-          }
-        } else if (profileError && profileError.code === "PGRST116") {
-          // No profile found, redirect to onboard
-          const redirectUrl = new URL("/onboard", request.url);
-          return NextResponse.redirect(redirectUrl);
-        } else {
-          // Default redirect if profile not found
-          const redirectUrl = new URL("/onboard", request.url);
-          return NextResponse.redirect(redirectUrl);
-        }
-      }
-    }
-
-    // Also handle protected routes for logged in users
-    if (session && !request.nextUrl.pathname.startsWith("/auth/")) {
-      // Get user profile to determine where to redirect
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (user) {
-        const { data: profile, error: profileError } = await supabase
-          .from("profiles")
-          .select("role, onboarding_completed")
-          .eq("user_id", user.id)
-          .single();
-
-        if (!profileError && profile) {
-          // If user is trying to access protected routes but hasn't completed onboarding
-          if (
-            !profile.onboarding_completed &&
-            request.nextUrl.pathname !== "/onboard"
-          ) {
-            const redirectUrl = new URL("/onboard", request.url);
-            return NextResponse.redirect(redirectUrl);
-          }
-          // If user has completed onboarding but is trying to access onboard page
-          if (
-            profile.onboarding_completed &&
-            request.nextUrl.pathname === "/onboard"
-          ) {
-            const redirectUrl = new URL("/home", request.url);
-            return NextResponse.redirect(redirectUrl);
-          }
-        } else if (profileError && profileError.code === "PGRST116") {
-          // No profile found, redirect to onboard
-          const redirectUrl = new URL("/onboard", request.url);
-          return NextResponse.redirect(redirectUrl);
-        }
-      }
-    }
-
-    return response;
-  } catch (error) {
-    // Return the response even if there's an error
-    return NextResponse.next({
-      request,
-    });
   }
+
+  // Also handle protected routes for logged in users
+  if (user && !request.nextUrl.pathname.startsWith("/auth/")) {
+    const { data: profile, error: profileError } = await supabase
+      .from("profiles")
+      .select("role, onboarding_completed")
+      .eq("user_id", user.id)
+      .single();
+
+    if (!profileError && profile) {
+      // If user is trying to access protected routes but hasn't completed onboarding
+      if (
+        !profile.onboarding_completed &&
+        request.nextUrl.pathname !== "/onboard"
+      ) {
+        const redirectUrl = new URL("/onboard", request.url);
+        return NextResponse.redirect(redirectUrl);
+      }
+      // If user has completed onboarding but is trying to access onboard page
+      if (
+        profile.onboarding_completed &&
+        request.nextUrl.pathname === "/onboard"
+      ) {
+        const redirectUrl = new URL("/home", request.url);
+        return NextResponse.redirect(redirectUrl);
+      }
+    } else if (profileError && profileError.code === "PGRST116") {
+      // No profile found, redirect to onboard
+      const redirectUrl = new URL("/onboard", request.url);
+      return NextResponse.redirect(redirectUrl);
+    }
+  }
+
+  return response;
 }

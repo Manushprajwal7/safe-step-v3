@@ -95,6 +95,34 @@ export async function POST(req: Request) {
       throw error;
     }
 
+    // Also update the profiles table
+    const profileUpdate = await supabase
+      .from("profiles")
+      .update({
+        full_name: parsed.name,
+        age: parsed.age,
+        weight_kg: parsed.weight_kg,
+        height_cm: parsed.height_cm,
+        gender: parsed.gender,
+        profession: parsed.profession,
+        diabetes_type: parsed.diabetes_type,
+        activity_level: parsed.activity_level,
+        diagnosis_date: parsed.diagnosis_date,
+        footwear_type: parsed.footwear_type,
+        prior_injuries: parsed.prior_injuries,
+        blood_sugar_mgdl: parsed.blood_sugar_mgdl,
+        foot_symptoms: parsed.foot_symptoms,
+        pre_existing_conditions: parsed.pre_existing_conditions,
+        onboarding_completed: true,
+      })
+      .eq("user_id", user.id);
+
+    if (profileUpdate.error) {
+      console.error("Profile update error:", profileUpdate.error);
+      // Don't throw here as the main onboarding data was saved successfully
+      // But log it for debugging
+    }
+
     console.log(
       "Successfully saved onboarding data:",
       JSON.stringify(data, null, 2)
@@ -128,7 +156,37 @@ export async function PUT(req: Request) {
       .eq("user_id", user.id)
       .select("*")
       .single();
+
     if (error) throw error;
+
+    // Also update the profiles table
+    const profileUpdate = await supabase
+      .from("profiles")
+      .update({
+        full_name: parsed.name,
+        age: parsed.age,
+        weight_kg: parsed.weight_kg,
+        height_cm: parsed.height_cm,
+        gender: parsed.gender,
+        profession: parsed.profession,
+        diabetes_type: parsed.diabetes_type,
+        activity_level: parsed.activity_level,
+        diagnosis_date: parsed.diagnosis_date,
+        footwear_type: parsed.footwear_type,
+        prior_injuries: parsed.prior_injuries,
+        blood_sugar_mgdl: parsed.blood_sugar_mgdl,
+        foot_symptoms: parsed.foot_symptoms,
+        pre_existing_conditions: parsed.pre_existing_conditions,
+        onboarding_completed: true,
+      })
+      .eq("user_id", user.id);
+
+    if (profileUpdate.error) {
+      console.error("Profile update error:", profileUpdate.error);
+      // Don't throw here as the main onboarding data was saved successfully
+      // But log it for debugging
+    }
+
     return NextResponse.json({ data });
   } catch (e: any) {
     console.error("Onboarding PUT error:", e);

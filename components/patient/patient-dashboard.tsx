@@ -26,7 +26,15 @@ import {
   User,
   Settings,
   Bell,
+  Plus,
+  TrendingDown,
+  Droplets,
+  Footprints,
 } from "lucide-react";
+import { useEffect, useState } from "react";
+import { supabase } from "@/lib/supabase/client";
+import HealthMetricsChart from "@/components/charts/health-metrics-chart";
+import HealthInsightsChart from "@/components/charts/health-insights-chart";
 
 const containerVariants: Variants = {
   hidden: { opacity: 0 },
@@ -64,7 +72,81 @@ const cardHoverVariants: Variants = {
   },
 };
 
+// Sample data for health metrics - in a real app, this would come from the database
+const healthMetrics = [
+  {
+    title: "Blood Sugar",
+    value: "120 mg/dL",
+    change: "-5%",
+    status: "normal",
+    icon: Droplets,
+  },
+  {
+    title: "Heart Rate",
+    value: "72 bpm",
+    change: "-2%",
+    status: "good",
+    icon: Heart,
+  },
+  {
+    title: "Foot Pressure",
+    value: "Normal",
+    change: "0%",
+    status: "good",
+    icon: Footprints,
+  },
+  {
+    title: "Risk Level",
+    value: "Low",
+    change: "-15%",
+    status: "excellent",
+    icon: TrendingDown,
+  },
+];
+
 export default function PatientDashboard() {
+  const [userName, setUserName] = useState("User");
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchUserProfile = async () => {
+      try {
+        const {
+          data: { user },
+          error: userError,
+        } = await supabase.auth.getUser();
+
+        if (userError) {
+          console.error("Error fetching user:", userError);
+          return;
+        }
+
+        if (user) {
+          const { data: profile, error: profileError } = await supabase
+            .from("profiles")
+            .select("full_name")
+            .eq("user_id", user.id)
+            .single();
+
+          if (profileError) {
+            console.error("Error fetching profile:", profileError);
+            // Fallback to email or user ID
+            setUserName(user.user_metadata?.full_name || user.email || "User");
+          } else if (profile) {
+            setUserName(profile.full_name || user.email || "User");
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching user profile:", error);
+        setUserName("User");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchUserProfile();
+  }, []);
+
   return (
     <motion.div
       className="container mx-auto px-4 py-6 space-y-6"
@@ -82,7 +164,7 @@ export default function PatientDashboard() {
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.3, duration: 0.6 }}
             >
-              Welcome back, John!
+              Welcome back, {loading ? "..." : userName}!
             </motion.h1>
             <motion.p
               className="text-gray-600"
@@ -116,94 +198,77 @@ export default function PatientDashboard() {
         </div>
       </motion.div>
 
-      {/* Quick Stats */}
-      <motion.div
-        variants={itemVariants}
-        className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"
-      >
-        <motion.div variants={cardHoverVariants} whileHover="hover">
-          <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200 shadow-sm">
-            <CardContent className="p-5">
-              <div className="flex items-center gap-3">
-                <motion.div
-                  className="w-12 h-12 bg-green-500 rounded-xl flex items-center justify-center"
-                  whileHover={{ rotate: 360 }}
-                  transition={{ duration: 0.6 }}
-                >
-                  <Activity className="w-6 h-6 text-white" />
-                </motion.div>
-                <div>
-                  <p className="text-sm text-gray-600">Today's Steps</p>
-                  <p className="text-2xl font-bold text-gray-800">
-                    <AnimatedCounter value={8247} />
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
+      {/* Health Metrics Overview */}
+      <motion.div variants={itemVariants}>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {healthMetrics.map((metric, index) => {
+            const Icon = metric.icon;
+            return (
+              <motion.div
+                key={metric.title}
+                variants={cardHoverVariants}
+                whileHover="hover"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.1 * index }}
+              >
+                <Card className="bg-white border-gray-200 shadow-sm">
+                  <CardContent className="p-5">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm text-gray-600">{metric.title}</p>
+                        <p className="text-xl font-bold text-gray-800 mt-1">
+                          {metric.value}
+                        </p>
+                        <div className="flex items-center mt-2">
+                          <span
+                            className={`text-xs font-medium ${
+                              metric.status === "excellent"
+                                ? "text-green-600"
+                                : metric.status === "good"
+                                ? "text-blue-600"
+                                : metric.status === "normal"
+                                ? "text-amber-600"
+                                : "text-red-600"
+                            }`}
+                          >
+                            {metric.change}
+                          </span>
+                          <span className="text-xs text-gray-500 ml-2">
+                            from last week
+                          </span>
+                        </div>
+                      </div>
+                      <div
+                        className={`w-12 h-12 rounded-xl flex items-center justify-center ${
+                          metric.status === "excellent"
+                            ? "bg-green-100 text-green-600"
+                            : metric.status === "good"
+                            ? "bg-blue-100 text-blue-600"
+                            : metric.status === "normal"
+                            ? "bg-amber-100 text-amber-600"
+                            : "bg-red-100 text-red-600"
+                        }`}
+                      >
+                        <Icon className="w-6 h-6" />
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            );
+          })}
+        </div>
+      </motion.div>
 
-        <motion.div variants={cardHoverVariants} whileHover="hover">
-          <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200 shadow-sm">
-            <CardContent className="p-5">
-              <div className="flex items-center gap-3">
-                <motion.div
-                  className="w-12 h-12 bg-blue-500 rounded-xl flex items-center justify-center"
-                  whileHover={{ scale: 1.2 }}
-                  transition={{ duration: 0.3 }}
-                >
-                  <Thermometer className="w-6 h-6 text-white" />
-                </motion.div>
-                <div>
-                  <p className="text-sm text-gray-600">Avg Temp</p>
-                  <p className="text-2xl font-bold text-gray-800">36.2°C</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
+      {/* Health Metrics Charts */}
+      <motion.div variants={itemVariants}>
+        <HealthMetricsChart />
+      </motion.div>
 
-        <motion.div variants={cardHoverVariants} whileHover="hover">
-          <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200 shadow-sm">
-            <CardContent className="p-5">
-              <div className="flex items-center gap-3">
-                <motion.div
-                  className="w-12 h-12 bg-purple-500 rounded-xl flex items-center justify-center"
-                  whileHover={{ y: -2 }}
-                  transition={{ duration: 0.2 }}
-                >
-                  <Zap className="w-6 h-6 text-white" />
-                </motion.div>
-                <div>
-                  <p className="text-sm text-gray-600">Pressure</p>
-                  <p className="text-2xl font-bold text-gray-800">Normal</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
-
-        <motion.div variants={cardHoverVariants} whileHover="hover">
-          <Card className="bg-gradient-to-br from-amber-50 to-amber-100 border-amber-200 shadow-sm">
-            <CardContent className="p-5">
-              <div className="flex items-center gap-3">
-                <motion.div
-                  className="w-12 h-12 bg-amber-500 rounded-xl flex items-center justify-center"
-                  whileHover={{ rotate: [0, -10, 10, 0] }}
-                  transition={{ duration: 0.5 }}
-                >
-                  <TrendingUp className="w-6 h-6 text-white" />
-                </motion.div>
-                <div>
-                  <p className="text-sm text-gray-600">Risk Level</p>
-                  <p className="text-2xl font-bold text-gray-800 text-amber-600">
-                    Low
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
+      {/* Health Insights Charts */}
+      <motion.div variants={itemVariants}>
+        <HealthInsightsChart />
       </motion.div>
 
       {/* Main Content Grid */}
@@ -328,6 +393,18 @@ export default function PatientDashboard() {
                     <Progress value={75} className="h-2.5 bg-gray-200" />
                   </motion.div>
                 </div>
+
+                {/* Quick Action Button */}
+                <motion.div
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  className="pt-4"
+                >
+                  <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white">
+                    <Plus className="w-4 h-4 mr-2" />
+                    Set New Goal
+                  </Button>
+                </motion.div>
               </CardContent>
             </Card>
           </motion.div>
@@ -366,6 +443,17 @@ export default function PatientDashboard() {
                 </p>
                 <p className="text-sm text-gray-600 mt-1">
                   It's been 2 days since your last monitoring session.
+                </p>
+              </div>
+            </div>
+            <div className="flex items-start gap-4 p-4 bg-amber-50 rounded-xl border border-amber-100">
+              <div className="w-3 h-3 bg-amber-500 rounded-full mt-1.5"></div>
+              <div>
+                <p className="font-medium text-gray-800">
+                  Blood sugar trend analysis
+                </p>
+                <p className="text-sm text-gray-600 mt-1">
+                  Your levels are stable but consider reviewing your diet.
                 </p>
               </div>
             </div>

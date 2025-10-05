@@ -24,7 +24,7 @@ const navigationItems = [
   },
   {
     name: "Session",
-    href: "/sessions",
+    href: "/session",
     icon: Activity,
   },
   {

@@ -47,7 +47,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           return;
         }
 
-        // Get user profile using the correct column name
+        // Get user profile
         const { data: profile, error } = await supabase
           .from("profiles")
           .select("role, onboarding_completed")
@@ -56,55 +56,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         if (error) {
           console.warn("Profile fetch error:", error);
-          // If profile doesn't exist, create a default one
-          if (error.code === "PGRST116") {
-            console.log("Profile not found, creating default profile");
-            const { data: newProfile, error: insertError } = await supabase
-              .from("profiles")
-              .insert({
-                user_id: authUser.id,
-                role: "patient",
-                full_name:
-                  authUser.user_metadata?.full_name ||
-                  authUser.email?.split("@")[0] ||
-                  "User",
-                onboarding_completed: false,
-              })
-              .select()
-              .single();
-
-            if (insertError) {
-              console.error("Error creating default profile:", insertError);
-              // Use default values if we can't create a profile
-              setUser({
-                id: authUser.id,
-                email: authUser.email || "",
-                role: "patient",
-                onboarding_completed: false,
-              });
-            } else {
-              setUser({
-                id: authUser.id,
-                email: authUser.email || "",
-                role: newProfile.role || "patient",
-                onboarding_completed: newProfile.onboarding_completed || false,
-              });
-            }
-          } else {
-            // For other errors, use default values
-            setUser({
-              id: authUser.id,
-              email: authUser.email || "",
-              role: "patient",
-              onboarding_completed: false,
-            });
-          }
+          // Use default values if profile doesn't exist or there's an error
+          setUser({
+            id: authUser.id,
+            email: authUser.email || "",
+            role: "patient",
+            onboarding_completed: false,
+          });
         } else {
           setUser({
             id: authUser.id,
             email: authUser.email || "",
-            role: profile.role || "patient",
-            onboarding_completed: profile.onboarding_completed || false,
+            role: profile?.role || "patient",
+            onboarding_completed: profile?.onboarding_completed || false,
           });
         }
       } catch (error) {
@@ -117,19 +81,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     checkUser();
 
-    // Listen for auth changes
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (!session) {
-        setUser(null);
-      } else {
-        checkUser();
-      }
-    });
+    // Listen for auth changes if the method exists (not in dummy client)
+    let unsubscribe: (() => void) | undefined;
+
+    // Type guard to check if onAuthStateChange exists
+    if (
+      "onAuthStateChange" in supabase.auth &&
+      typeof supabase.auth.onAuthStateChange === "function"
+    ) {
+      const { data } = (supabase.auth as any).onAuthStateChange(
+        (event: any, session: any) => {
+          if (!session) {
+            setUser(null);
+          } else {
+            checkUser();
+          }
+        }
+      );
+      unsubscribe = data?.subscription?.unsubscribe;
+    }
 
     return () => {
-      subscription.unsubscribe();
+      if (unsubscribe) {
+        unsubscribe();
+      }
     };
   }, []);
 

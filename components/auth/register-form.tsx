@@ -1,23 +1,31 @@
-"use client"
+"use client";
 
-import { useFormState, useFormStatus } from "react-dom"
-import { useState } from "react"
-import { useRouter } from "next/navigation"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Label } from "@/components/ui/label"
-import { Loader2, Mail, Lock, User, Eye, EyeOff } from "lucide-react"
-import Link from "next/link"
-import { signUp } from "@/lib/actions"
-import { signInWithGoogle } from "@/lib/auth-utils"
-import { Icons } from "@/components/icons"
+import { useFormState, useFormStatus } from "react-dom";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
+import { Loader2, Mail, Lock, User, Eye, EyeOff } from "lucide-react";
+import Link from "next/link";
+import { signUp } from "@/lib/actions";
 
 function SubmitButton() {
-  const { pending } = useFormStatus()
+  const { pending } = useFormStatus();
 
   return (
-    <Button type="submit" disabled={pending} className="w-full h-12 text-base font-medium">
+    <Button
+      type="submit"
+      disabled={pending}
+      className="w-full h-12 text-base font-medium"
+    >
       {pending ? (
         <>
           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -27,58 +35,38 @@ function SubmitButton() {
         "Create Account"
       )}
     </Button>
-  )
+  );
 }
 
 export default function RegisterForm() {
-  const [state, formAction] = useFormState(signUp, null)
-  const [showPassword, setShowPassword] = useState(false)
-  const [isGoogleLoading, setIsGoogleLoading] = useState(false)
-  const router = useRouter()
+  const [state, formAction] = useFormState(signUp, null);
+  const [showPassword, setShowPassword] = useState(false);
+  const router = useRouter();
+  const [success, setSuccess] = useState(false);
 
-  const handleGoogleSignIn = async () => {
-    setIsGoogleLoading(true)
-    try {
-      const { error } = await signInWithGoogle()
-      if (error) {
-        console.error('Google sign in error:', error)
-        // The error will be handled by the auth callback
-      }
-    } catch (error) {
-      console.error('Unexpected error during Google sign in:', error)
-    } finally {
-      setIsGoogleLoading(false)
+  // Handle form state changes
+  useEffect(() => {
+    if (state?.success) {
+      setSuccess(true);
+      // Redirect to login after a short delay
+      const timer = setTimeout(() => {
+        router.push("/auth/login");
+      }, 3000);
+      return () => clearTimeout(timer);
     }
-  }
+  }, [state, router]);
 
   return (
     <Card className="w-full max-w-md mx-auto shadow-lg border-0 bg-white/80 backdrop-blur-sm">
       <CardHeader className="space-y-1 pb-6">
-        <CardTitle className="text-2xl font-serif text-center">Create Account</CardTitle>
+        <CardTitle className="text-2xl font-serif text-center">
+          Create Account
+        </CardTitle>
         <CardDescription className="text-center text-base">
           Join Safe Step to start monitoring your health
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
-        {/* OAuth Buttons */}
-        <div className="space-y-4">
-          <Button
-            type="button"
-            variant="outline"
-            className="w-full h-12 text-base font-medium relative"
-            onClick={handleGoogleSignIn}
-            disabled={isGoogleLoading}
-          >
-            {isGoogleLoading ? (
-              <Icons.spinner className="mr-2 h-5 w-5 animate-spin" />
-            ) : (
-              <Icons.google className="mr-2 h-5 w-5" />
-            )}
-            Continue with Google
-          </Button>
-        </div>
-
-       
         <form action={formAction} className="space-y-4">
           {state?.error && (
             <div className="bg-destructive/10 border border-destructive/20 text-destructive px-4 py-3 rounded-lg text-sm">
@@ -86,9 +74,18 @@ export default function RegisterForm() {
             </div>
           )}
 
+          {success && (
+            <div className="bg-green-500/10 border border-green-500/20 text-green-700 px-4 py-3 rounded-lg text-sm">
+              Account created successfully! Redirecting to login...
+            </div>
+          )}
+
           {/* Full Name */}
           <div className="space-y-2">
-            <Label htmlFor="full_name" className="text-sm font-medium text-foreground">
+            <Label
+              htmlFor="full_name"
+              className="text-sm font-medium text-foreground"
+            >
               Full Name
             </Label>
             <div className="relative">
@@ -106,7 +103,10 @@ export default function RegisterForm() {
 
           {/* Email */}
           <div className="space-y-2">
-            <Label htmlFor="email" className="text-sm font-medium text-foreground">
+            <Label
+              htmlFor="email"
+              className="text-sm font-medium text-foreground"
+            >
               Email Address
             </Label>
             <div className="relative">
@@ -125,7 +125,10 @@ export default function RegisterForm() {
           {/* Password with eye toggle */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <Label htmlFor="password" className="text-sm font-medium text-foreground">
+              <Label
+                htmlFor="password"
+                className="text-sm font-medium text-foreground"
+              >
                 Password
               </Label>
               <button
@@ -134,7 +137,7 @@ export default function RegisterForm() {
                 className="text-sm font-medium text-primary hover:text-primary/80 transition-colors"
                 tabIndex={-1}
               >
-                {showPassword ? 'Hide' : 'Show'}
+                {showPassword ? "Hide" : "Show"}
               </button>
             </div>
             <div className="relative">
@@ -142,7 +145,7 @@ export default function RegisterForm() {
               <Input
                 id="password"
                 name="password"
-                type={showPassword ? 'text' : 'password'}
+                type={showPassword ? "text" : "password"}
                 placeholder="Create a strong password"
                 required
                 minLength={6}
@@ -161,16 +164,26 @@ export default function RegisterForm() {
                 )}
               </button>
             </div>
-            <p className="text-xs text-muted-foreground">Password must be at least 6 characters long</p>
+            <p className="text-xs text-muted-foreground">
+              Password must be at least 6 characters long
+            </p>
           </div>
 
           {/* Submit */}
           <SubmitButton />
+
+          <div className="text-center text-sm">
+            <Link href="/auth/login" className="text-primary hover:underline">
+              Already have an account? Sign in
+            </Link>
+          </div>
+
           <div className="text-xs text-muted-foreground text-center leading-relaxed">
-            By creating an account, you agree to our Terms of Service and Privacy Policy
+            By creating an account, you agree to our Terms of Service and
+            Privacy Policy
           </div>
         </form>
       </CardContent>
     </Card>
-  )
+  );
 }

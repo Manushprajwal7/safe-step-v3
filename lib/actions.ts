@@ -1,6 +1,6 @@
 "use server";
 
-import { createServerActionClient } from "@supabase/auth-helpers-nextjs";
+import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
@@ -13,16 +13,23 @@ function getSupabaseEnv() {
 }
 
 function makeServerActionClient() {
-  const { supabaseUrl, supabaseKey } = getSupabaseEnv();
-  if (!supabaseUrl || !supabaseKey) {
-    throw new Error(
-      "Supabase is not configured. Missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY."
-    );
-  }
   const cookieStore = cookies();
-  return createServerActionClient(
-    { cookies: () => cookieStore },
-    { supabaseUrl, supabaseKey }
+
+  return createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return cookieStore.getAll();
+        },
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value, options }) => {
+            cookieStore.set(name, value, options);
+          });
+        },
+      },
+    }
   );
 }
 
@@ -44,90 +51,52 @@ export async function signIn(prevState: any, formData: FormData) {
   }
 
   try {
-    // First, try normal sign in
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
 
-    // If it's an email confirmation error, bypass it using admin client
-    if (error && error.message.includes("Email not confirmed")) {
-      const adminClient = createAdminClient();
-
-      // Get the user directly
-      const {
-        data: { users },
-        error: listUsersError,
-      } = await adminClient.auth.admin.listUsers();
-
-      if (listUsersError) {
-        console.error("List users error:", listUsersError);
-        return { error: "Authentication failed." };
-      }
-
-      // Find the user with the matching email
-      const user = users.find((u) => u.email === email);
-
-      if (!user) {
-        return {
-          error: "No account found with this email. Please sign up first.",
-        };
-      }
-
-      // Since we can't directly create sessions, we'll mark the user as confirmed
-      // and then try to sign in again
-      const { error: updateError } =
-        await adminClient.auth.admin.updateUserById(user.id, {
-          email_confirm: true,
-        });
-
-      if (updateError) {
-        console.error("Update user error:", updateError);
-        return { error: "Authentication failed." };
-      }
-
-      // Now try to sign in again
-      const { data: retryData, error: retryError } =
-        await supabase.auth.signInWithPassword({
-          email,
-          password,
-        });
-
-      if (retryError) {
-        console.error("Retry sign in error:", retryError);
-        if (retryError.message.includes("Invalid login credentials"))
-          return { error: "Invalid email or password. Please try again." };
-        return { error: retryError.message || "Failed to sign in." };
-      }
-
-      // Use the retry data for the rest of the flow
-      if (retryData?.session && retryData?.user) {
-        // Continue with the successful authentication
-        // Profile should be created by trigger or handled by auth context
-        revalidatePath("/", "layout");
-        redirect("/home"); // 👈 redirect users where you want after login
-      } else {
-        return { error: "Authentication failed." };
-      }
-    } else if (error) {
-      // For other errors, check if it's because the user doesn't exist
-      if (error.message.includes("Invalid login credentials")) {
-        return {
-          error: "No account found with this email. Please sign up first.",
-        };
-      }
-      // For other errors
+    if (error) {
       console.error("Sign in error:", error);
-      if (error.message.includes("Invalid login credentials"))
-        return { error: "Invalid email or password. Please try again." };
-      return { error: error.message || "Failed to sign in." };
+      return { error: "Invalid email or password" };
     }
 
-    // If we have data, proceed with normal flow
     if (data?.session && data?.user) {
-      // Profile should be created by trigger or handled by auth context
+      // Ensure profile exists - create it immediately if it doesn't
+      try {
+        const { data: profileData, error: profileError } = await supabase
+          .from("profiles")
+          .select("user_id")
+          .eq("user_id", data.user.id)
+          .single();
+
+        if (profileError && profileError.code === "PGRST116") {
+          // Profile doesn't exist, create it immediately
+          console.log("Creating profile for user:", data.user.id);
+          const { error: createProfileError } = await supabase
+            .from("profiles")
+            .insert({
+              user_id: data.user.id,
+              role: "patient",
+              full_name: data.user.user_metadata?.full_name || data.user.email,
+              onboarding_completed: false,
+            });
+
+          if (createProfileError) {
+            console.error("Profile creation error:", createProfileError);
+            return { error: "Failed to initialize user profile" };
+          }
+        } else if (profileError) {
+          console.error("Profile check error:", profileError);
+          // Continue anyway as the profile might exist
+        }
+      } catch (profileCheckError) {
+        console.error("Unexpected error checking profile:", profileCheckError);
+        // Continue anyway
+      }
+
       revalidatePath("/", "layout");
-      redirect("/home"); // 👈 redirect users where you want after login
+      redirect("/home");
     }
   } catch (error) {
     console.error("Unexpected sign in error:", error);
@@ -156,69 +125,37 @@ export async function signUp(prevState: any, formData: FormData) {
   }
 
   try {
-    // Use admin client to bypass email confirmation
+    // Use admin client to create user without email confirmation
     const adminClient = createAdminClient();
 
-    console.log("Attempting to create user with email:", email);
+    const { data, error } = await adminClient.auth.admin.createUser({
+      email,
+      password,
+      email_confirm: true, // Skip email confirmation
+      user_metadata: {
+        full_name: name,
+      },
+    });
 
-    // Create user with email confirmation disabled
-    const { data: userData, error: signUpError } =
-      await adminClient.auth.admin.createUser({
-        email,
-        password,
-        email_confirm: true, // Mark as confirmed immediately
-        user_metadata: { full_name: name },
-      });
-
-    if (signUpError) {
-      console.error("Sign up error details:", {
-        message: signUpError.message,
-        status: signUpError.status,
-        code: signUpError.code,
-        error: signUpError,
-      });
+    if (error) {
       // Check if it's a duplicate user error
       if (
-        signUpError.message.includes("already registered") ||
-        signUpError.message.includes("already in use") ||
-        signUpError.message.includes("duplicate") ||
-        signUpError.message.includes("unique constraint")
+        error.message.includes("already registered") ||
+        error.message.includes("already in use")
       ) {
         return { error: "This email is already registered. Please sign in." };
       }
-      return { error: signUpError.message || "Failed to sign up." };
+      return { error: "Failed to create account" };
     }
 
-    console.log("User created successfully:", userData?.user?.id);
-
-    // Since we're using admin client, the profile creation trigger won't fire
-    // Manually create the profile with only the columns that exist
-    const { error: profileError } = await supabase.from("profiles").insert({
-      user_id: userData.user.id,
-      role: "patient",
-      onboarding_completed: false,
-    });
-
-    if (profileError) {
-      console.error("Profile creation error:", profileError);
-      // Don't fail the signup if profile creation fails, but log it
-    } else {
-      console.log("Profile created successfully for user:", userData.user.id);
-    }
-
-    // Instead of auto-login, redirect to login page with success message
+    // Redirect to login page with success message
     revalidatePath("/", "layout");
     return {
       success: true,
-      message:
-        "Your account has been created successfully. Please login to proceed.",
+      message: "Account created successfully. Please sign in.",
     };
   } catch (error: any) {
-    console.error("Unexpected sign up error:", {
-      message: error.message,
-      stack: error.stack,
-      error: error,
-    });
+    console.error("Unexpected sign up error:", error);
     return { error: "Unexpected error. Please try again." };
   }
 }
@@ -320,7 +257,7 @@ export async function completeOnboarding(prevState: any, formData: FormData) {
       : [];
 
     // Prepare onboarding data to store in profiles table
-    const onboardingData: any = {
+    const profileData: any = {
       full_name: name,
       age,
       weight_kg: weight,
@@ -330,6 +267,33 @@ export async function completeOnboarding(prevState: any, formData: FormData) {
       diabetes_type,
       activity_level,
       onboarding_completed: true, // Mark onboarding as completed
+    };
+
+    // Add optional fields if they exist
+    if (diagnosis_date) profileData.diagnosis_date = diagnosis_date;
+    if (footwear_type) profileData.footwear_type = footwear_type;
+    if (prior_injuries) profileData.prior_injuries = prior_injuries;
+    if (blood_sugar_levels) {
+      const bloodSugarNum = parseFloat(blood_sugar_levels);
+      if (bloodSugarNum > 0) {
+        profileData.blood_sugar_mgdl = bloodSugarNum;
+      }
+    }
+    if (foot_symptoms.length > 0) profileData.foot_symptoms = foot_symptoms;
+    if (pre_existing_conditions.length > 0)
+      profileData.pre_existing_conditions = pre_existing_conditions;
+
+    // Prepare onboarding data for the dedicated onboarding table
+    const onboardingData: any = {
+      user_id: user.id,
+      name,
+      age,
+      weight_kg: weight,
+      height_cm: height,
+      gender,
+      profession,
+      diabetes_type,
+      activity_level,
     };
 
     // Add optional fields if they exist
@@ -347,24 +311,80 @@ export async function completeOnboarding(prevState: any, formData: FormData) {
       onboardingData.pre_existing_conditions = pre_existing_conditions;
 
     // Update the user's profile with onboarding data and mark as completed
-    const { data, error } = await supabase
+    const { data: profileDataResult, error: profileError } = await supabase
       .from("profiles")
-      .update(onboardingData)
+      .update(profileData)
       .eq("user_id", user.id)
       .select("*")
       .single();
 
-    if (error) {
-      console.error("Database error:", error);
-      return { error: "Failed to save onboarding data." };
+    if (profileError) {
+      console.error("Profile update error:", profileError);
+      // Return a more detailed error message
+      return {
+        error: `Failed to update profile data: ${profileError.message}`,
+      };
     }
 
-    console.log("Successfully saved onboarding data:", data);
+    // Check if onboarding record already exists
+    const { data: existingOnboarding, error: existingError } = await supabase
+      .from("onboarding")
+      .select("id")
+      .eq("user_id", user.id)
+      .limit(1)
+      .maybeSingle();
+
+    if (existingError) {
+      console.error("Error checking existing onboarding data:", existingError);
+      return {
+        error: `Failed to check onboarding data: ${existingError.message}`,
+      };
+    }
+
+    let onboardingResult;
+    let onboardingError;
+
+    if (existingOnboarding) {
+      // Update existing onboarding record
+      const { data, error } = await supabase
+        .from("onboarding")
+        .update(onboardingData)
+        .eq("user_id", user.id)
+        .select("*")
+        .single();
+
+      onboardingError = error;
+      onboardingResult = data;
+    } else {
+      // Insert new onboarding record
+      const { data, error } = await supabase
+        .from("onboarding")
+        .insert(onboardingData)
+        .select("*")
+        .single();
+
+      onboardingError = error;
+      onboardingResult = data;
+    }
+
+    if (onboardingError) {
+      console.error("Onboarding operation error:", onboardingError);
+      return {
+        error: `Failed to save onboarding data: ${onboardingError.message}`,
+      };
+    }
+
+    console.log("Successfully saved profile data:", profileDataResult);
+    console.log("Successfully saved onboarding data:", onboardingResult);
 
     revalidatePath("/", "layout");
     redirect("/home");
-  } catch (error) {
+  } catch (error: any) {
     console.error("Onboarding completion error:", error);
-    return { error: "Unexpected error completing onboarding." };
+    return {
+      error: `Unexpected error completing onboarding: ${
+        error.message || "Unknown error"
+      }`,
+    };
   }
 }
