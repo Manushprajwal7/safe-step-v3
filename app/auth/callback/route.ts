@@ -1,4 +1,4 @@
-import { createServerClient, type CookieOptions } from "@supabase/ssr";
+import { createServerClient } from "@supabase/ssr";
 import { type NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 
@@ -75,11 +75,33 @@ export async function GET(request: NextRequest) {
     console.log("User authenticated:", {
       userId: session.user.id,
       email: session.user.email,
+      provider: session.user.app_metadata?.provider,
     });
 
-    // The profile should be automatically created by the trigger
-    // We don't need to manually create it here
-    // If there's an issue with the trigger, the auth context will handle it
+    // Ensure user profile exists
+    const { data: profileData, error: profileError } = await supabase
+      .from("profiles")
+      .select("user_id")
+      .eq("user_id", session.user.id)
+      .single();
+
+    // If no profile exists, create one
+    if (profileError || !profileData) {
+      console.log("Creating profile for OAuth user");
+      const { error: insertError } = await supabase.from("profiles").insert({
+        user_id: session.user.id,
+        role: "patient",
+        full_name:
+          session.user.user_metadata?.full_name || session.user.email || "",
+        onboarding_completed: false,
+      });
+
+      if (insertError) {
+        console.error("Error creating profile:", insertError);
+      } else {
+        console.log("Profile created successfully for OAuth user");
+      }
+    }
 
     console.log(
       "Authentication successful, redirecting to:",

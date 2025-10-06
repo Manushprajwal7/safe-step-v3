@@ -13,6 +13,7 @@ The authentication system uses Supabase Auth with email and password only, witho
 3. **Automatic Profile Creation**: User profiles are automatically created via database triggers
 4. **Simple API**: Clean, minimal API endpoints for authentication operations
 5. **Onboarding System**: Comprehensive health data collection for new users
+6. **Google OAuth Support**: Users can sign in/sign up with their Google accounts
 
 ## Database Schema
 
@@ -138,6 +139,15 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 3. On success, user is redirected to their dashboard
 4. User profile data is loaded into the application context
 
+### Google OAuth Flow
+
+1. User clicks "Sign in with Google" or "Sign up with Google"
+2. User is redirected to Google's OAuth consent screen
+3. After granting permission, user is redirected back to the application
+4. Application exchanges authorization code for access token
+5. User session is created and user profile is ensured to exist
+6. User is redirected to appropriate page based on role and onboarding status
+
 ### Onboarding Flow
 
 1. After login, users are redirected to `/onboard` if [onboarding_completed](file:///c:/Users/Manus/OneDrive/Desktop/projecs/ss-V3/scripts/auth-schema.sql#L75-L75) is false
@@ -159,6 +169,7 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 2. **Row Level Security**: Both profiles and onboarding tables use RLS to ensure users can only access their own data
 3. **Password Policies**: Minimum 6-character password requirement
 4. **Input Validation**: All inputs are validated on both client and server side
+5. **OAuth Security**: Uses secure OAuth implementation with proper redirect handling
 
 ## Environment Variables
 
@@ -168,13 +179,15 @@ The authentication system requires the following environment variables:
 NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
 SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
+NEXT_PUBLIC_SITE_URL=http://localhost:3000
 ```
 
 ## Setup Instructions
 
 1. Run the SQL schema script in `scripts/auth-schema.sql`
 2. Configure the required environment variables
-3. The authentication and onboarding system is ready to use
+3. Set up Google OAuth in Google Cloud Console and Supabase dashboard (see [GOOGLE_OAUTH.md](file:///c:/Users/Manus/OneDrive/Desktop/projecs/ss-V3/GOOGLE_OAUTH.md) for detailed instructions)
+4. The authentication and onboarding system is ready to use
 
 ## Error Handling
 
